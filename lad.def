@@ -1,0 +1,37 @@
+Bootstrap: docker
+From: python:3.11
+
+%post
+    pip install --upgrade pip
+    pip install torch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 --extra-index-url https://download.pytorch.org/whl/cu121
+    pip install pytorch-lightning==2.1.1
+    pip install numpy==1.26.0
+    pip install pandas
+    pip install matplotlib
+    pip install optuna==3.4.0
+    pip install botorch==0.9.4
+    pip install cmaes
+    pip install pyDOE2==1.3.0
+    pip install plotly
+    pip install nvitop
+    pip install seaborn
+    pip install omegaconf
+    pip install tensorboard
+    pip install opencv-python==4.6.0.66
+    pip install -U albumentations
+    pip install black
+    pip install h5py
+    pip install click
+    pip install moviepy
+    pip install -U kaleido
+    pip install timm==0.9.11
+    pip install pycocotools
+
+
+%environment
+    export PATH=$PATH
+
+%labels
+    Author sakurai, kamada
+    Version v0.0.1
+    Created 2025-03-05
