@@ -36,3 +36,11 @@ pythonのバージョンは3.11にする必要がある
 uv python install 3.11
 # .python-versionを3.11にする
 ```
+
+データセットはシンボリックリンクを作成しよう。
+```bash
+# リカバリー版で確認
+ln -s /home/local/amiya/dataset/ ./dataset
+# 過去の重みを使うなら スクリプトは絶対パスから相対パスにしよう
+ln -s /home/local/amiya/ ./amiya
+```
