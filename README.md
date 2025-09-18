@@ -33,4 +33,9 @@ sudo singularity build lad.sif lad
 ```
 
 
+```
+uv init
+uv python install 3.11
+.python-versionを3.11にしておこう
+```
 
