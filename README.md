@@ -1,41 +1,38 @@
-# LAD
+# LAD (Log Anomary Detection)
 
-log anomary detectionの略称かな？
+uv使います。
 
-開発はsingularityを使うよ。
 
 ## 環境構築
-- singularityのコンテナに入るだけ
 ```bash
-# コンテナ (読み込み専用)
-singularity shell --bind /home/local/amiya:/amiya --nv lad.sif
-# サンボドックス (書き込み可能)
-singularity shell --bind /home/local/amiya:/amiya --nv lad
+# パッケージのインストール
+uv sync
+# 仮想環境の起動
+source .venv/bin/activate
 ```
 
-### (Optional) singularityのビルド
-- 環境が大幅に変化した場合はビルドしておくと後々楽になる
-    - 後輩への引継ぎ
-    - どのような環境が自分でもわからなくなったとき
-    - 同じ環境を再現できる自身が無いとき
-- sudo権限が必要
-    - 必要ならサーバー大臣を呼ぶこと
-- @サーバー大臣
-    - 以下のコマンドを実行してコンテナをビルドする
-    - lad.sifは上書きされるので、気になるなら名前を変更するか、`lad2.sif` みたいな名前でビルドする 
+## 実行
+基本的にbashを使用する。
+実行環境やデータの保存場所が大幅に変更されている。
+
+現状では網屋データセット(?)をLogBERTで学習させる以下のコードが動作:
+
+### 訓練
+```bash 
+bash src/parallel_bash/parallel13_recovered.sh
+```
+
+### テスト
 ```bash
-# サンドボックス
-sudo singularity build --sandbox lad lad.def
-# コンテナ
-sudo singularity build lad.sif lad.def
-# サンドボックスからコンテナへ
-sudo singularity build lad.sif lad
+bash src/parallel_bash/test2_single.sh
 ```
 
+他のデータや前処理なども行う場合は、上記スクリプトに対応させる形で記述する。
 
-```
-uv init
+## メモ
+pythonのバージョンは3.11にする必要がある
+
+```bash
 uv python install 3.11
-.python-versionを3.11にしておこう
+# .python-versionを3.11にする
 ```
-
