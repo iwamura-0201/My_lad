@@ -5,25 +5,51 @@ from vocab import WordVocab, Vocab
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from .logdataset import LogDataset
+from pathlib import Path
 
+INTERIM_DIR = Path('../data/interim')
+PROCESSED_DIR = Path('../data/processed')
+RAW_DIR = Path('../data/raw')
 
 def generate_train_valid(cfg):
-    if (cfg.dataset.reverse) & ("reverse" in cfg.dataset):
-        with open(
-            f"./dataset/preprocessed/{cfg.dataset.name}/test_normal{str(10-cfg.dataset.train_ratio)}",
-            "r",
-        ) as f:
-            data_iter = f.readlines()
+    """
+    学習および検証用データを読み込み、固定長ウィンドウに分割したシーケンスを
+    train / valid に分割して返す。
+
+    Returns
+    -------
+    logkey_trainset : np.ndarray
+        学習用のログキーシーケンス（長さ降順にソート）
+    logkey_validset : np.ndarray
+        検証用のログキーシーケンス（長さ降順にソート）
+    time_trainset : np.ndarray
+        学習用のタイムスタンプシーケンス（長さ降順にソート）
+    time_validset : np.ndarray
+        検証用のタイムスタンプシーケンス（長さ降順にソート）
+    """
+    
+    # データセットのベースパス
+    dataset_dir = PROCESSED_DIR / cfg.dataset.name / f"ver_{cfg.dataset.version}" / f"ratio_{cfg.dataset.train_ratio}"
+    
+    # reverse が存在していて True のときだけ「test_normal」を train として扱う
+    use_reverse = ("reverse" in cfg.dataset) and cfg.dataset.reverse
+    
+    # 読み込むファイルの決定
+    if use_reverse:
+        data_path = dataset_dir / "test_normal"
     else:
-        with open(
-            f"./dataset/preprocessed/{cfg.dataset.name}/train{str(cfg.dataset.train_ratio)}",
-            "r",
-        ) as f:
-            data_iter = f.readlines()
+        data_path = dataset_dir / "train"
+    
+    # データのロード
+    with data_path.open("r") as f:
+        data_iter = f.readlines()
 
+    # 使用するセッション数
     num_session = int(len(data_iter) * cfg.dataset.sample.sample_ratio)
+    num_session = min(num_session, len(data_iter))
 
-    test_size = int(min(num_session, len(data_iter)) * cfg.dataset.sample.valid_size)
+    # valid に回すセッション数（ここではセッション数ベースの割合）
+    test_size = int(num_session * cfg.dataset.sample.valid_size)
 
     print("before filtering short session")
     print("train size ", int(num_session - test_size))
@@ -46,12 +72,17 @@ def generate_train_valid(cfg):
             cfg.dataset.sample.min_len,
         )
 
+        # 空セッションはそのままスキップ
+        if len(logkeys) == 0:
+            continue
+        
         logkey_seq_pairs += logkeys
         time_seq_pairs += times
 
     logkey_seq_pairs = np.array(logkey_seq_pairs)
     time_seq_pairs = np.array(time_seq_pairs)
 
+    # データを　train と val に分割
     logkey_trainset, logkey_validset, time_trainset, time_validset = train_test_split(
         logkey_seq_pairs,
         time_seq_pairs,
@@ -59,7 +90,7 @@ def generate_train_valid(cfg):
         random_state=cfg.default.r_seed,
     )
 
-    # sort seq_pairs by seq len
+    # シーケンスを長さ順にソート
     train_len = list(map(len, logkey_trainset))
     valid_len = list(map(len, logkey_validset))
 
@@ -80,45 +111,108 @@ def generate_train_valid(cfg):
     return logkey_trainset, logkey_validset, time_trainset, time_validset
 
 
-def generate_test(cfg, file_name):
+def generate_test(cfg):
     """
-    :return: log_seqs: num_samples x session(seq)_length, tim_seqs: num_samples x session_length
+    テスト用データを読み込み、固定長ウィンドウに分割したシーケンスを返す。
+
+    Returns
+    -------
+    normal_logkey_seqs : np.ndarray
+        正常ログのシーケンス（長さ降順にソート）
+    normal_time_seqs : np.ndarray
+        正常ログのタイムスタンプシーケンス（長さ降順にソート）
+    abnormal_logkey_seqs : np.ndarray
+        異常ログのシーケンス（長さ降順にソート）
+    abnormal_time_seqs : np.ndarray
+        異常ログのタイムスタンプシーケンス（長さ降順にソート）
     """
-    log_seqs = []
-    tim_seqs = []
-    with open(f"./dataset/preprocessed/{cfg.dataset.name}/{file_name}", "r") as f:
-        for _, line in tqdm(enumerate(f.readlines())):
-            log_seq, tim_seq = fixed_window(
-                line,
-                cfg.dataset.sample.window_size,
-                cfg.dataset.sample.adaptive_window,
-                cfg.dataset.sample.seq_len,
-                cfg.dataset.sample.min_len,
-            )
-            if len(log_seq) == 0:
-                continue
+    # 出力用のリストを用意
+    normal_logkey_seqs = []
+    normal_time_seqs = []
+    abnormal_logkey_seqs = []
+    abnormal_time_seqs = []
+    
+    # データセットのベースパス
+    dataset_dir = PROCESSED_DIR / cfg.dataset.name / f"ver_{cfg.dataset.version}" / f"ratio_{cfg.dataset.train_ratio}"
+    
+    # reverse が存在していて True のときだけ「train」を normal として扱う
+    use_reverse = ("reverse" in cfg.dataset) and cfg.dataset.reverse
+    
+    # normal のファイルパス決定
+    if use_reverse:
+        normal_path = dataset_dir / "train"
+    else:
+        normal_path = dataset_dir / "test_normal"
 
-            log_seqs += log_seq
-            tim_seqs += tim_seq
+    # abnormal のファイルパス
+    abnormal_path = dataset_dir / "test_abnormal"
 
-    # sort seq_pairs by seq len
-    log_seqs = np.array(log_seqs)
-    tim_seqs = np.array(tim_seqs)
+    # データのロード
+    with normal_path.open("r") as f:
+        normal_iter = f.readlines()
 
-    test_len = list(map(len, log_seqs))
-    test_sort_index = np.argsort(-1 * np.array(test_len))
+    with abnormal_path.open("r") as f:
+        abnormal_iter = f.readlines()
+    
+    # 正常ログのシーケンス生成
+    for line in tqdm(normal_iter, desc="Processing normal test data"):
+        normal_logkey_seq, normal_time_seq = fixed_window(
+            line,
+            cfg.dataset.sample.window_size,
+            cfg.dataset.sample.adaptive_window,
+            cfg.dataset.sample.seq_len,
+            cfg.dataset.sample.min_len,
+        )
+        if len(normal_logkey_seq) == 0: # 空シーケンスはskip
+            continue
 
-    log_seqs = log_seqs[test_sort_index]
-    tim_seqs = tim_seqs[test_sort_index]
+        normal_logkey_seqs += normal_logkey_seq
+        normal_time_seqs += normal_time_seq
+    
+    # 異常ログのシーケンス生成
+    for line in tqdm(abnormal_iter, desc="Processing abnormal test data"):
+        abnormal_logkey_seq, abnormal_time_seq = fixed_window(
+            line,
+            cfg.dataset.sample.window_size,
+            cfg.dataset.sample.adaptive_window,
+            cfg.dataset.sample.seq_len,
+            cfg.dataset.sample.min_len,
+        )
+        if len(abnormal_logkey_seq) == 0: # 空シーケンスはskip
+            continue
 
-    print(f"{file_name} size: {len(log_seqs)}")
-    return log_seqs, tim_seqs
+        abnormal_logkey_seqs += abnormal_logkey_seq
+        abnormal_time_seqs += abnormal_time_seq
+
+    # ===== 正常ログを長さ順にソート =====
+    normal_logkey_seqs = np.array(normal_logkey_seqs, dtype=object)
+    normal_time_seqs = np.array(normal_time_seqs, dtype=object)
+
+    normal_len = list(map(len, normal_logkey_seqs))
+    normal_sort_index = np.argsort(-1 * np.array(normal_len))
+
+    normal_logkey_seqs = normal_logkey_seqs[normal_sort_index]
+    normal_time_seqs = normal_time_seqs[normal_sort_index]
+
+    # ===== 異常ログも長さ順にソート =====
+    abnormal_logkey_seqs = np.array(abnormal_logkey_seqs, dtype=object)
+    abnormal_time_seqs = np.array(abnormal_time_seqs, dtype=object)
+
+    abnormal_len = list(map(len, abnormal_logkey_seqs))
+    abnormal_sort_index = np.argsort(-1 * np.array(abnormal_len))
+
+    abnormal_logkey_seqs = abnormal_logkey_seqs[abnormal_sort_index]
+    abnormal_time_seqs = abnormal_time_seqs[abnormal_sort_index]
+
+    return normal_logkey_seqs, normal_time_seqs, abnormal_logkey_seqs, abnormal_time_seqs
 
 
+# １シーケンスをlog情報とtime情報に分ける関数
+# おそらく、[EventID, deltaT]のような入力を想定
 def fixed_window(line, window_size, adaptive_window, seq_len=512, min_len=0):
     line = [ln.split(",") for ln in line.split()]
 
-    # filter the line/session shorter than 10
+    # filter the line/session shorter than 0
     if len(line) < min_len:
         return [], []
 
@@ -141,6 +235,7 @@ def fixed_window(line, window_size, adaptive_window, seq_len=512, min_len=0):
     else:
         line = line.squeeze()
         # if time duration doesn't exist, then create a zero array for time
+        # 時間情報が無ければ、timはゼロ埋め
         tim = np.zeros(line.shape)
 
     logkey_seqs = []
@@ -171,10 +266,10 @@ def fixed_window(line, window_size, adaptive_window, seq_len=512, min_len=0):
 
 
 def suggest_vocab(cfg):
-    with open(
-        f"./dataset/preprocessed/{cfg.dataset.name}/train_", "r", encoding="utf-8"
-    ) as f:
+    data_path = PROCESSED_DIR/cfg.dataset.name/f"ver_{cfg.dataset.version}"/"vocab"/"train"
+    with data_path.open("r", encoding="utf-8") as f:
         texts = f.readlines()
+    
     if cfg.dataset.vocab.name == "wordvocab":
         vocab = WordVocab(
             texts,
@@ -189,16 +284,9 @@ def suggest_vocab(cfg):
 
 
 def suggest_testloader(cfg, vocab, eval_batchsize):
+    # パーサーを使うverしか実装無し
     if cfg.dataset.parser:
-        if (cfg.dataset.reverse) & ("reverse" in cfg.dataset):
-            logkey_normal, time_normal = generate_test(
-                cfg, f"train{str(cfg.dataset.train_ratio)}"
-            )
-        else:
-            logkey_normal, time_normal = generate_test(
-                cfg, f"test_normal{str(10-cfg.dataset.train_ratio)}"
-            )
-        logkey_abnormal, time_abnormal = generate_test(cfg, "test_abnormal")
+        logkey_normal, time_normal, logkey_abnormal, time_abnormal  = generate_test(cfg)
 
         normal_data = LogDataset(
             logkey_normal,

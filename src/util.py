@@ -1,5 +1,5 @@
 import os
-import sys
+from pathlib import Path
 from omegaconf import OmegaConf
 import torch
 import numpy as np
@@ -11,24 +11,42 @@ from model.logbert.bert import BERT
 from model.logbert.rnn import LSTM, GRU
 from model.logbert.mlp import MLP
 
+INTERIM_DIR = Path('../data/interim')
+PROCESSED_DIR = Path('../data/processed')
+RAW_DIR = Path('../data/raw')
 
-def setup_config():
-    args = sys.argv
+def setup_config(
+    config_file_name: str,
+    override_args: list[str]
+):
+    """
+    yamlからconfigをロードする関数。
+    arg で部分的に書き換えも可。
+    生成した output_dir に最終的な config.yaml を残す。
+    """
 
-    config_file_name = args[1]
-    config_file_path = f"./src/conf/{config_file_name}.yaml"
+    config_file_path = f"conf/{config_file_name}.yaml"
     if os.path.exists(config_file_path):
         cfg = OmegaConf.load(config_file_path)
     else:
-        raise "No YAML file !!!"
+        raise FileNotFoundError(f"No YAML file !!! (path={config_file_path})")
 
-    cfg = OmegaConf.merge(cfg, OmegaConf.from_cli(args_list=args[2:]))
-
+    cfg = OmegaConf.merge(cfg, OmegaConf.from_cli(args_list=override_args))
+    
+    #{default.dir_name}/
+    #  {network.ver}/
+    #    {network.encoder.name}/
+    #      {dataset_path}/
+    #        seq_len_{dataset.sample.seq_len}/
+    #          r_seed_{default.r_seed}/
+    # 出力ディレクトリのパス生成
     if "out_dir" not in cfg:
-        if (cfg.dataset.reverse) & ("reverse" in cfg.dataset):
-            dataset_path = f"{cfg.dataset.name}_test{str(cfg.dataset.train_ratio)}train{str(10-cfg.dataset.train_ratio)}/"
+        if "reverse" in cfg.dataset and cfg.dataset.reverse:
+            dataset_path = f"{cfg.dataset.name}/ver_{cfg.dataset.version}/ratio_{1.0-cfg.dataset.train_ratio}/"
+            #dataset_path = f"{cfg.dataset.name}_test{str(cfg.dataset.train_ratio)}train{str(10-cfg.dataset.train_ratio)}/"
         else:
-            dataset_path = f"{cfg.dataset.name}_train{str(cfg.dataset.train_ratio)}test{str(10-cfg.dataset.train_ratio)}/"
+            dataset_path = f"{cfg.dataset.name}/ver_{cfg.dataset.version}/ratio_{cfg.dataset.train_ratio}/"
+            #dataset_path = f"{cfg.dataset.name}_train{str(cfg.dataset.train_ratio)}test{str(10-cfg.dataset.train_ratio)}/"
         output_dir_path = (
             f"{cfg.default.dir_name}/"
             + f"{cfg.network.ver}/"
@@ -47,7 +65,7 @@ def setup_config():
     config_name_comp = {"execute_config_name": config_file_name}
     cfg = OmegaConf.merge(cfg, config_name_comp)
 
-    config_name_comp = {"override_cmd": args[2:]}
+    config_name_comp = {"override_cmd": override_args}
     cfg = OmegaConf.merge(cfg, config_name_comp)
 
     with open(output_dir_path + "config.yaml", "w") as f:
@@ -198,7 +216,7 @@ def save_learner(cfg, model, device, BEST=False):
         save_file_path,
     )
     model.to(device)
-
+    
 
 def plot_log(cfg, result, loss_name):
     fig, axs = plt.subplots(
@@ -214,3 +232,86 @@ def plot_log(cfg, result, loss_name):
     plt.savefig(cfg.out_dir + "result_graph.png")
     plt.savefig(cfg.out_dir + "result_graph.pdf")
     plt.close()
+    
+    
+    
+# ----------------------- do_test で利用 ----------------------------#
+
+def compute_anomaly(results, cfg, seq_threshold=0.5):
+    # 各シーケンスの条件に基づき異常としてカウント
+
+    # 1. logkeyの異常判定
+    logkey_anomalies = (
+        results["undetected_tokens"] > results["masked_tokens"] * seq_threshold
+        if cfg.network.is_logkey
+        else torch.zeros_like(results["undetected_tokens"], dtype=torch.bool)
+    )
+
+    # 2. 時間情報の異常判定
+    time_anomalies = (
+        results["num_error"] > results["masked_tokens"] * seq_threshold
+        if cfg.network.is_time
+        else torch.zeros_like(results["num_error"], dtype=torch.bool)
+    )
+
+    # 3. ハイパースフィア判定
+    hypersphere_anomalies = (
+        results["deepSVDD_label"] > 0
+        if cfg.eval.hypersphere_loss_test
+        else torch.zeros_like(results["deepSVDD_label"], dtype=torch.bool)
+    )
+
+    total_anomalies = logkey_anomalies | time_anomalies | hypersphere_anomalies # OR判定
+    total_errors = total_anomalies.sum(dim=0).item() # エラー件数
+
+    return total_errors
+
+
+def cal_eval_matrix(test_normal_results, test_abnormal_results, cfg, seq_range):
+    # best_result = [0] * 8
+    full_result = []
+
+    for seq_th in seq_range:
+        FP = compute_anomaly(test_normal_results, cfg, seq_th)
+        TP = compute_anomaly(test_abnormal_results, cfg, seq_th)
+
+        TN = len(test_normal_results["masked_tokens"]) - FP
+        FN = len(test_abnormal_results["masked_tokens"]) - TP
+
+        Precision = 100 * TP / (TP + FP) if (TP + FP) != 0 else 0
+        Recall = 100 * TP / (TP + FN) if (TP + FN) != 0 else 0
+        F1 = 2 * Precision * Recall / (Precision + Recall) if (Precision + Recall) != 0 else 0
+
+        # total = FP + TP + FN + TN
+
+        FPR = FP * 100 / (TN + FP)
+        TPR = TP * 100 / (FN + TP)
+
+        full_result.append(
+            [
+                FP,
+                TP,
+                TN,
+                FN,
+                Precision,
+                Recall,
+                F1,
+                TPR,
+                FPR
+            ]
+        )
+
+        # if F1 > best_result[-1]:
+        #     best_result = [
+        #         seq_th,
+        #         FP,
+        #         TP,
+        #         TN,
+        #         FN,
+        #         P,
+        #         R,
+        #         F1,
+        #     ]
+
+    return full_result
+

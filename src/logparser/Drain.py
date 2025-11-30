@@ -315,6 +315,10 @@ class LogParser:
         )
 
     def preprocess(self, line):
+        # --- ここを追加：必ず文字列にしてから正規表現をかける ---
+        # line = str(line)
+        # -------------------------------------------------------
+        
         for currentRex in self.rex:
             line = re.sub(currentRex, "<*>", line)
         return line
