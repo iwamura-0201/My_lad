@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# train and val
+# python src/main.py rnn/art3 default.num_workers=16 dataset.train_ratio=6 dataset.sample.seq_len=128 default.device_id="cuda:2" loss.hypersphere.bias=0.1 loss.mask.bias=0.9 dataset.sample.mask_ratio=0.65 default.dir_name="paracheck0109065" dataset.reverse=False network.encoder.name=gru_bi
+python src/main.py rnn/art4 default.num_workers=16 dataset.train_ratio=6 dataset.sample.seq_len=128 default.device_id="cuda:2" loss.hypersphere.bias=0.1 loss.mask.bias=0.9 dataset.sample.mask_ratio=0.65 default.dir_name="paracheck0109065" dataset.reverse=False network.encoder.name=gru_bi
+python src/main.py rnn/web1_3 default.num_workers=16 dataset.train_ratio=6 dataset.sample.seq_len=128 default.device_id="cuda:2" loss.hypersphere.bias=0.1 loss.mask.bias=0.9 dataset.sample.mask_ratio=0.65 default.dir_name="paracheck0109065" dataset.reverse=False network.encoder.name=gru_bi
+python src/main.py rnn/web2_3 default.num_workers=16 dataset.train_ratio=6 dataset.sample.seq_len=128 default.device_id="cuda:2" loss.hypersphere.bias=0.1 loss.mask.bias=0.9 dataset.sample.mask_ratio=0.65 default.dir_name="paracheck0109065" dataset.reverse=False network.encoder.name=gru_bi

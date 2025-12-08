@@ -1,0 +1,64 @@
+default:
+  dir_name: outputs
+  resource: "local"
+  num_workers: 16
+  epochs: 200
+  r_seed: 31
+  device_id: "cuda:3"
+  deterministic: True
+  check_val_every_n_epoch: 1
+  monitor:
+    name: "ValTotal"
+    mode: "min"
+
+network: 
+  ver: "logbert"
+  encoder:
+      name: lstm_bi
+      hidden_size: 256
+      layer_num: 4
+      dropout: 0.1
+  is_logkey: True
+  is_time: False
+loss:
+  num: 2
+  mask:
+    bias: 0.9
+  hypersphere:
+    bias: 0.1
+dataset:
+  name: "WEB2_2"
+  parser: True
+  train_ratio: 4
+  sample:
+    window_size:  128
+    adaptive_window: True
+    seq_len: 512
+    min_len: 10 
+    mask_ratio: 0.65
+    sample_ratio: 1
+    valid_size: 0.1
+  vocab:
+    name: wordvocab
+    vocab_size: 36
+    min_freq: 1
+eval:
+  hypersphere_loss_test: False
+  num_candidates: 15
+  
+optimizer:
+  name: SGD
+  scheduler:
+    name: cosine 
+  hp:
+    lr: 0.001
+    momentum: 0.9
+    weight_decay: 0.0005
+    lr_decay: 0.0001
+    lr_warmup_step: 5
+    lr_warmup_init: 1e-5
+    batch_size: 32
+    nesterov: True
+    warmup_prefix: False
+
+
