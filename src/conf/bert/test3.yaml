@@ -36,7 +36,7 @@ dataset:
   sample:
     window_size:  128
     adaptive_window: True
-    seq_len: 256
+    seq_len: 128
     min_len: 10 
     mask_ratio: 0.65
     sample_ratio: 1
