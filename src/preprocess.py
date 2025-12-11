@@ -444,7 +444,7 @@ def anotate_csv(
 def sliding_window(
     raw_data: pd.DataFrame,
     para: dict,
-    mode: str,  # "time" or "count"
+    mode: str,  # "time" or "fixed"
 ) -> pd.DataFrame:
     """
     Split logs into sliding windows.
@@ -461,7 +461,7 @@ def sliding_window(
                 "window_size": float,  # 1ウィンドウの時間幅 [秒]
                 "step_size"  : float,  # ウィンドウを進める時間 [秒]
             }
-        mode="count" の場合:
+        mode="fixed" の場合:
             {
                 "window_size": int,    # 1ウィンドウに含めるイベント数（固定長）
                 "step_size"  : int,    # 次のウィンドウへ進むときに何イベントずらすか
@@ -469,7 +469,7 @@ def sliding_window(
 
     mode : str
         "time"  : 時間ベースのスライディングウィンドウ
-        "count" : イベント数ベース（固定長）のスライディングウィンドウ
+        "fixed" : イベント数ベース（固定長）のスライディングウィンドウ
 
     Returns
     -------
@@ -560,7 +560,7 @@ def sliding_window(
     # -----------------------------
     # 2) イベント数ベース（固定長）
     # -----------------------------
-    elif mode == "count":
+    elif mode == "fixed":
         window_size = int(para["window_size"])
         step_size   = int(para.get("step_size", window_size))  # 指定なければ非オーバーラップ
 
@@ -621,11 +621,12 @@ def prepare_model_data(
     output_dir:Path,
     window_size:int = 300,
     step_size:int = 60,
-    mode: str = "time", 
+    mode: str = "fixed", 
 ) -> None:
     """
     モデル前データ作成工程の親関数。
     vocabファイル作成まで行う。
+    アノテーション済みのcsvを入力に想定。
     """
     output_dir.mkdir(exist_ok=True)
     
