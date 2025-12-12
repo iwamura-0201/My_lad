@@ -1023,3 +1023,171 @@ def delete_unwanted_logs(
     filtered.to_csv(output_filepath, index=False)
     return filtered
     
+
+def calculate_equivalent_window_params(
+    csv_filepath: Union[str, Path],
+    source_mode: str,  # "time" or "fixed"
+    source_window_size: float,
+    source_step_size: float,
+    target_mode: str,  # "time" or "fixed"
+) -> dict:
+    """
+    CSVファイルを読み込み、指定されたwindow_sizeおよびstep_sizeに対して、
+    平均シーケンス長を合わせるために、もう一方の手法で必要なパラメータを算出する。
+
+    Parameters
+    ----------
+    csv_filepath : Union[str, Path]
+        入力CSVファイルのパス。
+        必須カラム: TimeCreated_SystemTime（タイムスタンプ）
+        ※ T1105/security2.csv の形式を想定
+
+    source_mode : str
+        変換元の方式。"time" または "fixed"
+
+    source_window_size : float
+        変換元のwindow_size。
+        - timeモード: 秒単位の時間幅
+        - fixedモード: イベント数
+
+    source_step_size : float
+        変換元のstep_size。
+        - timeモード: 秒単位の時間幅
+        - fixedモード: イベント数
+
+    target_mode : str
+        変換先の方式。"time" または "fixed"
+
+    Returns
+    -------
+    dict
+        {
+            "window_size": float or int,  # 変換先のwindow_size
+            "step_size": float or int,    # 変換先のstep_size
+            "avg_event_rate": float,      # 平均イベント発生率 (events/second)
+            "avg_time_per_event": float,  # 平均イベント間隔 (seconds/event)
+            "total_events": int,          # 総イベント数
+            "total_duration": float,      # 総時間 (seconds)
+            "source_avg_sequence_length": float,  # 変換元の平均シーケンス長
+        }
+
+    Raises
+    ------
+    ValueError
+        source_mode と target_mode が同じ場合、または無効な値の場合
+    FileNotFoundError
+        CSVファイルが見つからない場合
+    """
+    # モードの検証
+    if source_mode == target_mode:
+        raise ValueError("source_mode と target_mode は異なる値を指定してください。")
+    
+    if source_mode not in ("time", "fixed"):
+        raise ValueError("source_mode は 'time' または 'fixed' を指定してください。")
+    
+    if target_mode not in ("time", "fixed"):
+        raise ValueError("target_mode は 'time' または 'fixed' を指定してください。")
+
+    # CSVファイルの読み込み
+    csv_filepath = Path(csv_filepath)
+    if not csv_filepath.exists():
+        raise FileNotFoundError(f"CSVファイルが見つかりません: {csv_filepath}")
+    
+    data = pd.read_csv(csv_filepath)
+    
+    if data.shape[0] == 0:
+        raise ValueError("CSVファイルにデータがありません。")
+    
+    # 必須カラムの確認
+    if "TimeCreated_SystemTime" not in data.columns:
+        raise ValueError("TimeCreated_SystemTime カラムが見つかりません。")
+    
+    # タイムスタンプを変換してUNIX秒に
+    data["datetime"] = pd.to_datetime(data["TimeCreated_SystemTime"], format='mixed')
+    data["timestamp"] = data["datetime"].view("int64") // 10**9
+    
+    # 統計値の計算
+    time_data = data["timestamp"]
+    total_events = len(time_data)
+    total_duration = float(time_data.max() - time_data.min())
+    
+    if total_duration <= 0:
+        raise ValueError("データの時間範囲が0秒以下です。時間ベースの変換ができません。")
+    
+    # 平均イベント率 (events/second)
+    avg_event_rate = total_events / total_duration
+    # 平均イベント間隔 (seconds/event)
+    avg_time_per_event = total_duration / total_events
+
+    result = {
+        "csv_filepath": str(csv_filepath),
+        "avg_event_rate": avg_event_rate,
+        "avg_time_per_event": avg_time_per_event,
+        "total_events": total_events,
+        "total_duration": total_duration,
+    }
+
+    if source_mode == "time" and target_mode == "fixed":
+        # time → fixed への変換
+        # timeモードでのwindow_size秒間に含まれる平均イベント数 = window_size * avg_event_rate
+        source_avg_seq_len = source_window_size * avg_event_rate
+        target_window_size = int(round(source_avg_seq_len))
+        
+        # step_sizeも同様に変換
+        source_step_events = source_step_size * avg_event_rate
+        target_step_size = int(round(source_step_events))
+        
+        # 最小値を1に制限
+        target_window_size = max(1, target_window_size)
+        target_step_size = max(1, target_step_size)
+        
+        result["window_size"] = target_window_size
+        result["step_size"] = target_step_size
+        result["source_avg_sequence_length"] = source_avg_seq_len
+        
+    elif source_mode == "fixed" and target_mode == "time":
+        # fixed → time への変換
+        # fixedモードでのwindow_sizeイベントに相当する時間 = window_size * avg_time_per_event
+        source_avg_seq_len = source_window_size  # fixedでは固定
+        target_window_size = source_window_size * avg_time_per_event
+        
+        # step_sizeも同様に変換
+        target_step_size = source_step_size * avg_time_per_event
+        
+        result["window_size"] = target_window_size
+        result["step_size"] = target_step_size
+        result["source_avg_sequence_length"] = source_avg_seq_len
+
+    return result
+
+
+def print_equivalent_params_summary(params: dict, source_mode: str, target_mode: str) -> None:
+    """
+    calculate_equivalent_window_params の結果を整形して表示するユーティリティ関数。
+
+    Parameters
+    ----------
+    params : dict
+        calculate_equivalent_window_params の戻り値
+    source_mode : str
+        変換元モード
+    target_mode : str
+        変換先モード
+    """
+    print("=" * 60)
+    print("Sliding Window パラメータ変換結果")
+    print("=" * 60)
+    print(f"入力CSV: {params.get('csv_filepath', 'N/A')}")
+    print(f"変換方向: {source_mode} → {target_mode}")
+    print("-" * 60)
+    print("【データ統計】")
+    print(f"  総イベント数:    {params['total_events']:,}")
+    print(f"  総時間:          {params['total_duration']:.2f} 秒")
+    print(f"  平均イベント率:  {params['avg_event_rate']:.4f} events/sec")
+    print(f"  平均イベント間隔: {params['avg_time_per_event']:.4f} sec/event")
+    print("-" * 60)
+    print("【変換結果】")
+    print(f"  推奨 window_size: {params['window_size']}")
+    print(f"  推奨 step_size:   {params['step_size']}")
+    print(f"  元の平均シーケンス長: {params['source_avg_sequence_length']:.2f}")
+    print("=" * 60)
