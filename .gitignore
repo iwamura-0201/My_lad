@@ -1,2 +1,4 @@
 data/*
 .venv
+*.zip
+**_/_pycache__/**

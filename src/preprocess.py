@@ -616,6 +616,97 @@ def deeplog_file_generator(
                 f.write(",".join([str(v) for v in val]) + " ")
             f.write("\n")
 
+def calculate_seq_length_stats(df: pd.DataFrame, seq_column: str = "EventId") -> dict:
+    """
+    DataFrameの指定カラムからシーケンス長統計を計算する。
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        シーケンスデータを含むDataFrame
+    seq_column : str
+        シーケンス（配列）が格納されているカラム名
+    
+    Returns
+    -------
+    dict
+        統計情報の辞書 {"count", "avg_len", "min_len", "max_len", "std_len"}
+    """
+    if len(df) == 0:
+        return {"count": 0, "avg_len": 0.0, "min_len": 0, "max_len": 0, "std_len": 0.0}
+    
+    lengths = df[seq_column].apply(lambda x: len(x) if hasattr(x, '__len__') else 0)
+    return {
+        "count": len(df),
+        "avg_len": float(lengths.mean()),
+        "min_len": int(lengths.min()),
+        "max_len": int(lengths.max()),
+        "std_len": float(lengths.std()),
+    }
+
+
+def save_seq_stats_report(
+    stats_dict: dict,
+    output_path: Path,
+    mode: str = "fixed",
+    window_size: int = 0,
+    step_size: int = 0,
+) -> None:
+    """
+    シーケンス長統計をtxtファイルに保存し、コンソールに表示する。
+    
+    Parameters
+    ----------
+    stats_dict : dict
+        {ratio: {"train": stats, "test_normal": stats, "test_abnormal": stats}, ...}
+    output_path : Path
+        保存先のファイルパス
+    mode : str
+        sliding_windowのモード ("time" or "fixed")
+    window_size : int
+        ウィンドウサイズ
+    step_size : int
+        ステップサイズ
+    """
+    from datetime import datetime
+    
+    lines = []
+    lines.append("=" * 70)
+    lines.append("Sequence Length Statistics Report")
+    lines.append("=" * 70)
+    lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"Mode: {mode}")
+    lines.append(f"Window Size: {window_size}")
+    lines.append(f"Step Size: {step_size}")
+    lines.append("=" * 70)
+    
+    for ratio, ratio_stats in sorted(stats_dict.items()):
+        lines.append(f"\n[Ratio: {ratio}]")
+        lines.append("-" * 50)
+        
+        for data_type, stats in ratio_stats.items():
+            lines.append(f"  {data_type}:")
+            lines.append(f"    Count:    {stats['count']:,}")
+            lines.append(f"    Avg Len:  {stats['avg_len']:.2f}")
+            lines.append(f"    Min Len:  {stats['min_len']}")
+            lines.append(f"    Max Len:  {stats['max_len']}")
+            lines.append(f"    Std Dev:  {stats['std_len']:.2f}")
+    
+    lines.append("\n" + "=" * 70)
+    
+    report = "\n".join(lines)
+    
+    # コンソールに表示
+    print(report)
+    
+    # ファイルに保存
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(report)
+    
+    print(f"\nStatistics saved to: {output_path}")
+
+
 def prepare_model_data(
     logdata_filepath:Path,
     output_dir:Path,
@@ -657,6 +748,9 @@ def prepare_model_data(
     df_normal = df_normal.sample(frac=1, random_state=12).reset_index(drop=True)  
     normal_len = len(df_normal)
     
+    # シーケンス長統計を格納する辞書
+    seq_stats = {}
+    
     train_ratio_list = [0.6, 0.8]
     for train_ratio in train_ratio_list:
 
@@ -697,6 +791,13 @@ def prepare_model_data(
         )
         print("test abnormal size {}".format(len(df_abnormal)))
         
+        # シーケンス長統計を計算
+        seq_stats[train_ratio] = {
+            "train": calculate_seq_length_stats(train, "EventId"),
+            "test_normal": calculate_seq_length_stats(test_normal, "EventId"),
+            "test_abnormal": calculate_seq_length_stats(df_abnormal, "EventId"),
+        }
+        
     # vocab 作成
     train_ratio = 1.0
 
@@ -712,6 +813,16 @@ def prepare_model_data(
         features = ["EventId"], # EventId only
     )
     print("training size {}".format(train_len))
+    
+    # シーケンス長統計をファイルに保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
         
     return
 
@@ -744,10 +855,16 @@ def prepare_integrated_model_data(
     
     # ratio = 1.0 はvocab作成用
     train_ratio_list = [0.6, 0.8, 1.0]
+    
+    # シーケンス長統計を格納する辞書
+    seq_stats = {}
 
     for train_ratio in train_ratio_list:
         integrated_train = pd.DataFrame()
         df_normal = pd.DataFrame()
+        
+        # このratioの統計を格納
+        ratio_stats = {"train": None, "test_normal_all": [], "test_abnormal_all": []}
         
         # projectごとに処理
         for project in project_list:
@@ -796,6 +913,9 @@ def prepare_integrated_model_data(
                 df = test_normal,
                 features = ["EventId", "deltaT"], 
             )
+            
+            # test_normalの統計を収集
+            ratio_stats["test_normal_all"].append(test_normal)
 
             # test(abnormal)
             test_abnormal = temp_abnormal
@@ -804,6 +924,10 @@ def prepare_integrated_model_data(
                 df = test_abnormal,
                 features = ["EventId", "deltaT"], 
             )
+            
+            # test_abnormalの統計を収集
+            ratio_stats["test_abnormal_all"].append(test_abnormal)
+            
         if(train_ratio == 1.0):
             continue
 
@@ -813,6 +937,16 @@ def prepare_integrated_model_data(
             df = integrated_train,
             features = ["EventId", "deltaT"], 
         )
+        
+        # このratioの統計を計算
+        test_normal_combined = pd.concat(ratio_stats["test_normal_all"], ignore_index=True) if ratio_stats["test_normal_all"] else pd.DataFrame()
+        test_abnormal_combined = pd.concat(ratio_stats["test_abnormal_all"], ignore_index=True) if ratio_stats["test_abnormal_all"] else pd.DataFrame()
+        
+        seq_stats[train_ratio] = {
+            "train": calculate_seq_length_stats(integrated_train, "EventId"),
+            "test_normal": calculate_seq_length_stats(test_normal_combined, "EventId"),
+            "test_abnormal": calculate_seq_length_stats(test_abnormal_combined, "EventId"),
+        }
         
     # vocab 作成
     save_dir = output_dir/'vocab'
@@ -824,6 +958,17 @@ def prepare_integrated_model_data(
         features = ["EventId"], # EventId only
     )
     print("vocab size {}".format(len(df_normal)))
+    
+    # シーケンス長統計をファイルに保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
+    
     return
     
 
