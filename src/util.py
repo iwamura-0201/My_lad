@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from timm.scheduler import CosineLRScheduler
 from model.logbert.log_model import LogBertModel
 from model.logbert.bert import BERT
+from model.logbert.bert_v2 import BERTv2
 from model.logbert.rnn import LSTM, GRU
 from model.logbert.mlp import MLP
 
@@ -83,6 +84,17 @@ def suggest_network(cfg):
     if cfg.network.ver == "logbert":
         if cfg.network.encoder.name == "bert":
             encoder = BERT(
+                cfg.dataset.vocab.vocab_size,
+                cfg.dataset.sample.seq_len,
+                cfg.network.encoder.hidden_size,
+                cfg.network.encoder.layer_num,
+                cfg.network.encoder.attn_heads,
+                cfg.network.encoder.dropout,
+                cfg.network.is_logkey,
+                cfg.network.is_time,
+            )
+        elif cfg.network.encoder.name == "bert_v2":
+            encoder = BERTv2(
                 cfg.dataset.vocab.vocab_size,
                 cfg.dataset.sample.seq_len,
                 cfg.network.encoder.hidden_size,
