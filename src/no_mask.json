@@ -1,0 +1,11 @@
+{
+    "4688": [
+        "SubjectUserSid",
+        "NewProcessName",
+        "CommandLine"
+    ],
+    "5156": [
+        "Application",
+        "SourcePort"
+    ]
+}
