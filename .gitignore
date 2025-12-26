@@ -1,4 +1,11 @@
 data/*
 .venv
 *.zip
-**/_pycache__/**
+output/*
+archive/*
+
+# Pythonが生成するキャッシュや一時ファイル
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

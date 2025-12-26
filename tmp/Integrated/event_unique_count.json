@@ -1,0 +1,812 @@
+{
+  "5156": {
+    "count": 685614,
+    "attributes": {
+      "ProcessID": 1848,
+      "Application": 72,
+      "Direction": 2,
+      "SourceAddress": 10,
+      "SourcePort": 22388,
+      "DestAddress": 1178,
+      "DestPort": 38,
+      "Protocol": 5,
+      "FilterRTID": 55,
+      "LayerName": 2,
+      "LayerRTID": 4,
+      "RemoteUserID": 1,
+      "RemoteMachineID": 1
+    }
+  },
+  "5158": {
+    "count": 488200,
+    "attributes": {
+      "ProcessId": 1852,
+      "Application": 72,
+      "SourceAddress": 5,
+      "SourcePort": 16401,
+      "Protocol": 2,
+      "FilterRTID": 52,
+      "LayerName": 1,
+      "LayerRTID": 2
+    }
+  },
+  "4673": {
+    "count": 47366,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 15,
+      "ObjectServer": 3,
+      "Service": 3,
+      "PrivilegeList": 2,
+      "ProcessId": 461,
+      "ProcessName": 30
+    }
+  },
+  "4688": {
+    "count": 39423,
+    "attributes": {
+      "SubjectUserSid": 4,
+      "SubjectUserName": 4,
+      "SubjectDomainName": 4,
+      "SubjectLogonId": 18,
+      "NewProcessId": 3092,
+      "NewProcessName": 473,
+      "TokenElevationType": 3,
+      "ProcessId": 2090,
+      "CommandLine": 4757,
+      "TargetUserSid": 8,
+      "TargetUserName": 17,
+      "TargetDomainName": 7,
+      "TargetLogonId": 58,
+      "ParentProcessName": 178,
+      "MandatoryLabel": 4,
+      "x86)\\]') { $Res": 1
+    }
+  },
+  "4702": {
+    "count": 33558,
+    "attributes": {
+      "SubjectUserSid": 3,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 7,
+      "TaskName": 26,
+      "TaskContentNew": 2263,
+      "ClientProcessStartKey": 6072,
+      "ClientProcessId": 2086,
+      "ParentProcessId": 140,
+      "RpcCallClientLocality": 1,
+      "FQDN": 1
+    }
+  },
+  "5447": {
+    "count": 19694,
+    "attributes": {
+      "ProcessId": 21,
+      "UserSid": 2,
+      "UserName": 2,
+      "ProviderKey": 9,
+      "ProviderName": 4,
+      "ChangeType": 2,
+      "FilterKey": 10389,
+      "FilterName": 242,
+      "FilterType": 1,
+      "FilterId": 2815,
+      "LayerKey": 24,
+      "LayerName": 24,
+      "LayerId": 24,
+      "Weight": 174,
+      "Conditions": 498,
+      "Action": 3,
+      "CalloutKey": 35,
+      "CalloutName": 24
+    }
+  },
+  "5379": {
+    "count": 8028,
+    "attributes": {
+      "SubjectUserSid": 3,
+      "SubjectUserName": 3,
+      "SubjectDomainName": 3,
+      "SubjectLogonId": 12,
+      "TargetName": 16,
+      "Type": 2,
+      "CountOfCredentialsReturned": 2,
+      "ReadOperation": 2,
+      "ReturnCode": 2,
+      "ProcessCreationTime": 511,
+      "ClientProcessId": 454
+    }
+  },
+  "5157": {
+    "count": 7310,
+    "attributes": {
+      "ProcessID": 5,
+      "Application": 2,
+      "Direction": 1,
+      "SourceAddress": 3,
+      "SourcePort": 2260,
+      "DestAddress": 3,
+      "DestPort": 3,
+      "Protocol": 2,
+      "FilterRTID": 4,
+      "LayerName": 1,
+      "LayerRTID": 1,
+      "RemoteUserID": 1,
+      "RemoteMachineID": 1
+    }
+  },
+  "4624": {
+    "count": 7116,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 2,
+      "TargetUserSid": 18,
+      "TargetUserName": 19,
+      "TargetDomainName": 6,
+      "TargetLogonId": 433,
+      "LogonType": 5,
+      "LogonProcessName": 5,
+      "AuthenticationPackageName": 4,
+      "WorkstationName": 3,
+      "LogonGuid": 67,
+      "TransmittedServices": 1,
+      "LmPackageName": 2,
+      "KeyLength": 2,
+      "ProcessId": 30,
+      "ProcessName": 6,
+      "IpAddress": 5,
+      "IpPort": 18,
+      "ImpersonationLevel": 2,
+      "RestrictedAdminMode": 2,
+      "TargetOutboundUserName": 1,
+      "TargetOutboundDomainName": 1,
+      "VirtualAccount": 2,
+      "TargetLinkedLogonId": 57,
+      "ElevatedToken": 2
+    }
+  },
+  "4627": {
+    "count": 7116,
+    "attributes": {
+      "SubjectUserSid": 3,
+      "SubjectUserName": 3,
+      "SubjectDomainName": 3,
+      "SubjectLogonId": 2,
+      "TargetUserSid": 18,
+      "TargetUserName": 19,
+      "TargetDomainName": 6,
+      "TargetLogonId": 433,
+      "LogonType": 5,
+      "EventIdx": 1,
+      "EventCountTotal": 1,
+      "GroupMembership": 28
+    }
+  },
+  "4672": {
+    "count": 7091,
+    "attributes": {
+      "SubjectUserSid": 12,
+      "SubjectUserName": 13,
+      "SubjectDomainName": 5,
+      "SubjectLogonId": 400,
+      "PrivilegeList": 6
+    }
+  },
+  "5154": {
+    "count": 4503,
+    "attributes": {
+      "ProcessId": 99,
+      "Application": 12,
+      "SourceAddress": 4,
+      "SourcePort": 30,
+      "Protocol": 1,
+      "FilterRTID": 55,
+      "LayerName": 1,
+      "LayerRTID": 2
+    }
+  },
+  "4907": {
+    "count": 3980,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "ObjectServer": 1,
+      "ObjectType": 1,
+      "ObjectName": 1822,
+      "HandleId": 60,
+      "NewSd": 3,
+      "ProcessId": 7,
+      "ProcessName": 4,
+      "OldSd": 1
+    }
+  },
+  "4945": {
+    "count": 1800,
+    "attributes": {
+      "ProfileUsed": 1,
+      "RuleId": 411,
+      "RuleName": 269
+    }
+  },
+  "4662": {
+    "count": 853,
+    "attributes": {
+      "SubjectUserSid": 3,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 3,
+      "ObjectServer": 2,
+      "ObjectType": 2,
+      "ObjectName": 3,
+      "OperationType": 2,
+      "HandleId": 59,
+      "AccessList": 2,
+      "AccessMask": 2,
+      "Properties": 1,
+      "AdditionalInfo": 4,
+      "AdditionalInfo2": 10
+    }
+  },
+  "4799": {
+    "count": 678,
+    "attributes": {
+      "TargetUserName": 4,
+      "TargetDomainName": 1,
+      "TargetSid": 4,
+      "SubjectUserSid": 3,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 3,
+      "CallerProcessId": 175,
+      "CallerProcessName": 15
+    }
+  },
+  "4634": {
+    "count": 631,
+    "attributes": {
+      "TargetUserSid": 13,
+      "TargetUserName": 13,
+      "TargetDomainName": 5,
+      "TargetLogonId": 395,
+      "LogonType": 4
+    }
+  },
+  "4798": {
+    "count": 488,
+    "attributes": {
+      "TargetUserName": 9,
+      "TargetDomainName": 1,
+      "TargetSid": 9,
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 13,
+      "CallerProcessId": 74,
+      "CallerProcessName": 5
+    }
+  },
+  "4946": {
+    "count": 345,
+    "attributes": {
+      "ProfileChanged": 5,
+      "RuleId": 335,
+      "RuleName": 36
+    }
+  },
+  "4957": {
+    "count": 336,
+    "attributes": {
+      "RuleId": 18,
+      "RuleName": 18,
+      "RuleAttr": 2
+    }
+  },
+  "4948": {
+    "count": 328,
+    "attributes": {
+      "ProfileChanged": 4,
+      "RuleId": 315,
+      "RuleName": 58
+    }
+  },
+  "4663": {
+    "count": 222,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 2,
+      "ObjectServer": 1,
+      "ObjectType": 1,
+      "ObjectName": 6,
+      "HandleId": 91,
+      "AccessList": 3,
+      "AccessMask": 3,
+      "ProcessId": 28,
+      "ProcessName": 2,
+      "ResourceAttributes": 1
+    }
+  },
+  "4611": {
+    "count": 153,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "LogonProcessName": 7
+    }
+  },
+  "4776": {
+    "count": 135,
+    "attributes": {
+      "PackageName": 1,
+      "TargetUserName": 2,
+      "Workstation": 2,
+      "Status": 2
+    }
+  },
+  "6416": {
+    "count": 126,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "DeviceId": 76,
+      "DeviceDescription": 31,
+      "ClassId": 3,
+      "ClassName": 3,
+      "VendorIds": 7,
+      "CompatibleIds": 3,
+      "LocationInformation": 1
+    }
+  },
+  "4797": {
+    "count": 121,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 3,
+      "Workstation": 1,
+      "TargetUserName": 8,
+      "TargetDomainName": 1
+    }
+  },
+  "4648": {
+    "count": 114,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "LogonGuid": 1,
+      "TargetUserName": 15,
+      "TargetDomainName": 5,
+      "TargetLogonGuid": 36,
+      "TargetServerName": 2,
+      "TargetInfo": 2,
+      "ProcessId": 59,
+      "ProcessName": 5,
+      "IpAddress": 3,
+      "IpPort": 2
+    }
+  },
+  "4697": {
+    "count": 114,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "ServiceName": 114,
+      "ServiceFileName": 12,
+      "ServiceType": 2,
+      "ServiceStartType": 2,
+      "ServiceAccount": 1,
+      "ClientProcessStartKey": 5,
+      "ClientProcessId": 5,
+      "ParentProcessId": 3
+    }
+  },
+  "4625": {
+    "count": 107,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 3,
+      "TargetUserSid": 1,
+      "TargetUserName": 1,
+      "TargetDomainName": 1,
+      "Status": 1,
+      "FailureReason": 1,
+      "SubStatus": 1,
+      "LogonType": 1,
+      "LogonProcessName": 1,
+      "AuthenticationPackageName": 1,
+      "WorkstationName": 1,
+      "TransmittedServices": 1,
+      "LmPackageName": 1,
+      "KeyLength": 1,
+      "ProcessId": 3,
+      "ProcessName": 1,
+      "IpAddress": 1,
+      "IpPort": 1
+    }
+  },
+  "4985": {
+    "count": 92,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "TransactionId": 42,
+      "NewState": 3,
+      "ResourceManager": 1,
+      "ProcessId": 29,
+      "ProcessName": 8
+    }
+  },
+  "4622": {
+    "count": 60,
+    "attributes": {
+      "SecurityPackageName": 10
+    }
+  },
+  "4701": {
+    "count": 45,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 2,
+      "TaskName": 5,
+      "TaskContent": 34,
+      "ClientProcessStartKey": 35,
+      "ClientProcessId": 35,
+      "ParentProcessId": 7,
+      "RpcCallClientLocality": 1,
+      "FQDN": 1
+    }
+  },
+  "4947": {
+    "count": 42,
+    "attributes": {
+      "ProfileChanged": 2,
+      "RuleId": 31,
+      "RuleName": 28
+    }
+  },
+  "4674": {
+    "count": 40,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 8,
+      "ObjectServer": 2,
+      "ObjectType": 2,
+      "ObjectName": 3,
+      "HandleId": 2,
+      "AccessMask": 4,
+      "PrivilegeList": 3,
+      "ProcessId": 10,
+      "ProcessName": 3
+    }
+  },
+  "5142": {
+    "count": 40,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "ShareName": 7,
+      "ShareLocalPath": 5
+    }
+  },
+  "4699": {
+    "count": 35,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 6,
+      "TaskName": 15,
+      "ClientProcessStartKey": 14,
+      "ClientProcessId": 14,
+      "ParentProcessId": 12,
+      "RpcCallClientLocality": 1,
+      "FQDN": 1
+    }
+  },
+  "4698": {
+    "count": 35,
+    "attributes": {
+      "SubjectUserSid": 2,
+      "SubjectUserName": 2,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 5,
+      "TaskName": 14,
+      "TaskContent": 21,
+      "ClientProcessStartKey": 13,
+      "ClientProcessId": 13,
+      "ParentProcessId": 10,
+      "RpcCallClientLocality": 1,
+      "FQDN": 1
+    }
+  },
+  "5061": {
+    "count": 20,
+    "attributes": {
+      "SubjectUserSid": 4,
+      "SubjectUserName": 3,
+      "SubjectDomainName": 3,
+      "SubjectLogonId": 9,
+      "ProviderName": 1,
+      "AlgorithmName": 2,
+      "KeyName": 3,
+      "KeyType": 2,
+      "Operation": 1,
+      "ReturnCode": 1
+    }
+  },
+  "4953": {
+    "count": 18,
+    "attributes": {
+      "Profile": 1,
+      "ReasonForRejection": 1,
+      "RuleId": 3,
+      "RuleName": 1
+    }
+  },
+  "5140": {
+    "count": 17,
+    "attributes": {
+      "SubjectUserSid": 3,
+      "SubjectUserName": 3,
+      "SubjectDomainName": 2,
+      "SubjectLogonId": 7,
+      "ObjectType": 1,
+      "IpAddress": 2,
+      "IpPort": 11,
+      "ShareName": 4,
+      "AccessMask": 1,
+      "AccessList": 1,
+      "ShareLocalPath": 2
+    }
+  },
+  "4614": {
+    "count": 12,
+    "attributes": {
+      "NotificationPackageName": 2
+    }
+  },
+  "4660": {
+    "count": 12,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "ObjectServer": 1,
+      "HandleId": 2,
+      "ProcessId": 9,
+      "ProcessName": 1,
+      "TransactionId": 1
+    }
+  },
+  "4657": {
+    "count": 12,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "ObjectName": 1,
+      "ObjectValueName": 1,
+      "HandleId": 7,
+      "OperationType": 1,
+      "OldValueType": 1,
+      "OldValue": 1,
+      "NewValueType": 1,
+      "NewValue": 1,
+      "ProcessId": 8,
+      "ProcessName": 1
+    }
+  },
+  "4700": {
+    "count": 8,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "TaskName": 2,
+      "TaskContent": 2,
+      "ClientProcessStartKey": 6,
+      "ClientProcessId": 6,
+      "ParentProcessId": 3,
+      "RpcCallClientLocality": 1,
+      "FQDN": 1
+    }
+  },
+  "4647": {
+    "count": 7,
+    "attributes": {
+      "TargetUserSid": 1,
+      "TargetUserName": 1,
+      "TargetDomainName": 1,
+      "TargetLogonId": 6
+    }
+  },
+  "4616": {
+    "count": 6,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "PreviousTime": 5,
+      "NewTime": 5,
+      "ProcessId": 4,
+      "ProcessName": 1
+    }
+  },
+  "4696": {
+    "count": 6,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "TargetUserSid": 1,
+      "TargetUserName": 1,
+      "TargetDomainName": 1,
+      "TargetLogonId": 1,
+      "TargetProcessId": 1,
+      "TargetProcessName": 1,
+      "ProcessId": 1
+    }
+  },
+  "4826": {
+    "count": 6,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "LoadOptions": 1,
+      "AdvancedOptions": 1,
+      "ConfigAccessPolicy": 1,
+      "RemoteEventLogging": 1,
+      "KernelDebug": 1,
+      "VsmLaunchType": 1,
+      "TestSigning": 1,
+      "FlightSigning": 1,
+      "DisableIntegrityChecks": 1,
+      "HypervisorLoadOptions": 1,
+      "HypervisorLaunchType": 1,
+      "HypervisorDebug": 1
+    }
+  },
+  "4610": {
+    "count": 6,
+    "attributes": {
+      "AuthenticationPackageName": 1
+    }
+  },
+  "4902": {
+    "count": 6,
+    "attributes": {
+      "PuaCount": 1,
+      "PuaPolicyId": 5
+    }
+  },
+  "4944": {
+    "count": 6,
+    "attributes": {
+      "GroupPolicyApplied": 1,
+      "Profile": 1,
+      "OperationMode": 1,
+      "RemoteAdminEnabled": 1,
+      "MulticastFlowsEnabled": 1,
+      "LogDroppedPacketsEnabled": 1,
+      "LogSuccessfulConnectionsEnabled": 1
+    }
+  },
+  "4779": {
+    "count": 6,
+    "attributes": {
+      "AccountName": 1,
+      "AccountDomain": 1,
+      "LogonID": 2,
+      "SessionName": 3,
+      "ClientName": 2,
+      "ClientAddress": 2
+    }
+  },
+  "4778": {
+    "count": 6,
+    "attributes": {
+      "AccountName": 1,
+      "AccountDomain": 1,
+      "LogonID": 2,
+      "SessionName": 3,
+      "ClientName": 2,
+      "ClientAddress": 2
+    }
+  },
+  "4800": {
+    "count": 6,
+    "attributes": {
+      "TargetUserSid": 1,
+      "TargetUserName": 1,
+      "TargetDomainName": 1,
+      "TargetLogonId": 2,
+      "SessionId": 1
+    }
+  },
+  "5031": {
+    "count": 2,
+    "attributes": {
+      "Profiles": 1,
+      "Application": 2
+    }
+  },
+  "5382": {
+    "count": 2,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "SchemaFriendlyName": 1,
+      "Schema": 1,
+      "Resource": 1,
+      "Identity": 1,
+      "Flags": 1,
+      "ReturnCode": 1,
+      "ProcessCreationTime": 2,
+      "ClientProcessId": 2
+    }
+  },
+  "4956": {
+    "count": 2,
+    "attributes": {
+      "ActiveProfile": 1
+    }
+  },
+  "4717": {
+    "count": 2,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "TargetSid": 2,
+      "AccessGranted": 1
+    }
+  },
+  "4718": {
+    "count": 2,
+    "attributes": {
+      "SubjectUserSid": 1,
+      "SubjectUserName": 1,
+      "SubjectDomainName": 1,
+      "SubjectLogonId": 1,
+      "TargetSid": 2,
+      "AccessRemoved": 1
+    }
+  }
+}
