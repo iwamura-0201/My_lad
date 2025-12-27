@@ -1,11 +1,13 @@
 data/*
+dataset
+eventid_content/*
 .venv
 *.zip
-output/*
+outputs/*
 archive/*
 
 # Pythonが生成するキャッシュや一時ファイル
-__pycache__/
+*/__pycache__/*
 *.pyc
 *.pyo
 *.pyd
