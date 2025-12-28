@@ -3,7 +3,7 @@ dataset
 eventid_content/*
 .venv
 *.zip
-outputs/*
+output/*
 archive/*
 
 # Pythonが生成するキャッシュや一時ファイル
