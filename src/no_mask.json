@@ -1,12 +1,10 @@
 {
     "4688": [
-        "ProcessID",
         "SubjectUserSid",
         "NewProcessName",
         "CommandLine"
     ],
     "5156": [
-        "ProcessID",
         "Application",
         "DestPort"
     ]
