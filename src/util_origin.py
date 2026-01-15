@@ -43,13 +43,20 @@ def setup_config(
     #          r_seed_{default.r_seed}/
     # 出力ディレクトリのパス生成
     if "out_dir" not in cfg:
-        if hasattr(cfg.dataset, 'dataset_dir'):
-            dataset_path =  cfg.dataset.dataset_dir.replace("../data/processed/", "")
+        if hasattr(cfg.dataset, 'another_method') and cfg.dataset.another_method:
+            if "reverse" in cfg.dataset and cfg.dataset.reverse:
+                dataset_path = f"{cfg.dataset.dataset_dir}".split("/")[-1] + f"/{cfg.dataset.name}/ratio_{1.0 - cfg.dataset.train_ratio}/"
+            else:
+                dataset_path = f"{cfg.dataset.dataset_dir}".split("/")[-1] + f"/{cfg.dataset.name}/ratio_{cfg.dataset.train_ratio}/"
+        elif (cfg.dataset.name == "BGL" or cfg.dataset.name == "Tbird" or cfg.dataset.name == "refine" or cfg.dataset.name == "refine2"):
+            dataset_path =  f"{cfg.dataset.dataset_dir}".split("/")[-1] + f"/{cfg.dataset.window_type}/"
         else:
             if "reverse" in cfg.dataset and cfg.dataset.reverse:
-                dataset_path = f"{cfg.dataset.name}/ratio_{1.0 - cfg.dataset.train_ratio}/"
+                dataset_path = f"{cfg.dataset.name}/ver_{cfg.dataset.version}/ratio_{1.0 - cfg.dataset.train_ratio}/"
+                #dataset_path = f"{cfg.dataset.name}_test{str(cfg.dataset.train_ratio)}train{str(10-cfg.dataset.train_ratio)}/"
             else:
-                dataset_path = f"{cfg.dataset.name}/ratio_{cfg.dataset.train_ratio}/"
+                dataset_path = f"{cfg.dataset.name}/ver_{cfg.dataset.version}/ratio_{cfg.dataset.train_ratio}/"
+            #dataset_path = f"{cfg.dataset.name}_train{str(cfg.dataset.train_ratio)}test{str(10-cfg.dataset.train_ratio)}/"
         output_dir_path = (
             f"{cfg.default.dir_name}/"
             + f"{cfg.network.ver}/"

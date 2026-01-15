@@ -836,6 +836,176 @@ def prepare_model_data(
         
     return
 
+def prepare_model_train_data(
+    logdata_filepath:Path,
+    output_dir:Path,
+    train_ratio: int,
+    features: list = ["EventId", "deltaT"],
+    use_columns: list = ["timestamp", "Label", "EventID", "EventId", "deltaT"],
+    window_size:int = 300,
+    step_size:int = 60,
+    mode: str = "fixed", 
+    shuffle: bool = True,
+) -> None:
+    """
+    モデル前データ作成工程の親関数。
+    vocabファイル作成は行わない。
+    引数のtrain_ratioに応じて訓練データを生成。
+    アノテーション済みのcsvを入力に想定。
+    """
+    output_dir.mkdir(exist_ok=True)
+    
+    data = pd.read_csv(logdata_filepath)
+    
+    #----------- 諸操作 ----------#
+    if "Label" not in data.columns:
+        raise ValueError("Label column not found in CSV.")
+    data["Label"] = data["Label"].apply(lambda x: int(x != "-"))
+    data["datetime"] = pd.to_datetime(data["TimeCreated_SystemTime"], format='mixed')
+    data["timestamp"] = data["datetime"].view("int64") // 10**9  
+    data["deltaT"] = data["datetime"].diff().dt.total_seconds().fillna(0)
+    
+    # ----------- データフレーム → モデル前データ ----------#
+    # sampling with sliding window
+    deeplog_df = sliding_window(
+        data[use_columns],
+        #para={"window_size": int(window_size) * 60, "step_size": int(step_size) * 60},
+        para={"window_size": window_size, "step_size": step_size},
+        mode = mode
+    )
+    
+    # normalとabnormalを切り分け
+    df_normal = deeplog_df[deeplog_df["Label"] == 0]
+    df_abnormal = deeplog_df[deeplog_df["Label"] == 1]
+
+    if shuffle:
+        # shuffle
+        df_normal = df_normal.sample(frac=1, random_state=12).reset_index(drop=True)  
+        normal_len = len(df_normal)
+    
+    # シーケンス長統計を格納する辞書
+    seq_stats = {}
+
+    train_len = int(normal_len * train_ratio)
+    save_dir = output_dir
+    os.makedirs(save_dir, exist_ok=True)
+
+    # train
+    train = df_normal[:train_len]
+    deeplog_file_generator(
+        filename = str(save_dir) + '/train',
+        df = train,
+        features = features,
+    )
+    print("training size {}".format(train_len))
+    
+    # シーケンス長統計を計算
+    seq_stats[train_ratio] = {
+        "train": calculate_seq_length_stats(train, features),
+    }
+        
+    # シーケンス長統計をファイルに保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
+        
+    return
+
+def prepare_model_test_data(
+    logdata_filepath:Path,
+    output_dir:Path,
+    train_ratio: int,
+    features: list = ["EventId", "deltaT"],
+    use_columns: list = ["timestamp", "Label", "EventID", "EventId", "deltaT"],
+    window_size:int = 300,
+    step_size:int = 60,
+    mode: str = "fixed",
+    shuffle: bool = True, 
+) -> None:
+    """
+    モデル前データ作成工程の親関数。
+    vocabファイル作成は行わない。
+    引数のtrain_ratioに応じて訓練データを生成。
+    アノテーション済みのcsvを入力に想定。
+    """
+    output_dir.mkdir(exist_ok=True)
+    
+    data = pd.read_csv(logdata_filepath)
+    
+    #----------- 諸操作 ----------#
+    if "Label" not in data.columns:
+        raise ValueError("Label column not found in CSV.")
+    data["Label"] = data["Label"].apply(lambda x: int(x != "-"))
+    data["datetime"] = pd.to_datetime(data["TimeCreated_SystemTime"], format='mixed')
+    data["timestamp"] = data["datetime"].view("int64") // 10**9  
+    data["deltaT"] = data["datetime"].diff().dt.total_seconds().fillna(0)
+    
+    # ----------- データフレーム → モデル前データ ----------#
+    # sampling with sliding window
+    deeplog_df = sliding_window(
+        data[use_columns],
+        #para={"window_size": int(window_size) * 60, "step_size": int(step_size) * 60},
+        para={"window_size": window_size, "step_size": step_size},
+        mode = mode
+    )
+    
+    # normalとabnormalを切り分け
+    df_normal = deeplog_df[deeplog_df["Label"] == 0]
+    df_abnormal = deeplog_df[deeplog_df["Label"] == 1]
+
+    if shuffle:
+        # shuffle
+        df_normal = df_normal.sample(frac=1, random_state=12).reset_index(drop=True)  
+        normal_len = len(df_normal)
+    
+    # シーケンス長統計を格納する辞書
+    seq_stats = {}
+
+    train_len = int(normal_len * train_ratio)
+    save_dir = output_dir
+    os.makedirs(save_dir, exist_ok=True)
+
+    # test(normal)
+    test_normal = df_normal[train_len:]
+    deeplog_file_generator(
+        filename = str(save_dir) + '/test_normal',
+        df = test_normal,
+        features = features,
+    )
+    print("test normal size {}".format(normal_len - train_len))
+
+    # abnormal
+    deeplog_file_generator(
+        filename = str(save_dir) + '/test_abnormal',
+        df = df_abnormal,
+        features = features, 
+    )
+    print("test abnormal size {}".format(len(df_abnormal)))
+    
+    # シーケンス長統計を計算
+    seq_stats[train_ratio] = {
+        "test_normal": calculate_seq_length_stats(test_normal, features),
+        "test_abnormal": calculate_seq_length_stats(df_abnormal, features),
+    }
+    
+    # シーケンス長統計をファイルに保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
+        
+    return
+
+
 def prepare_integrated_model_data(
     logdata_filepath:Path,
     output_dir:Path,
@@ -1127,6 +1297,179 @@ def prepare_refine_model_data(
     )
     
     return
+
+#def eventid2embeddings():
+
+    
+
+def prepare_scores_model_data(
+    output_dir: Path = PROCESSED_DIR / "scores",
+    window_size: int = 300,
+    step_size: int = 60,
+    mode: str = "time",
+) -> None:
+    """
+    scoreデータ作成。
+    プロジェクト情報も別ファイルに保存する。
+    """
+
+    projects = ["T1105(full)", "WEB1", "WEB2"]
+    train_ratio = {"T1105(full)": 0.94, "WEB1": 0.7, "WEB2": 0.7}
+    split = ["train", "test"]
+    use_columns = ["timestamp","deltaT","Label", "EventID", "score_missing", "mahalanobis_score"]
+    features = ["EventID", "mahalanobis_score", "score_missing"] # 順序！！！
+
+    # シーケンス長統計を格納する辞書
+    seq_stats = {}
+
+    # 全プロジェクトのウィンドウ分割データを統合
+    all_windowed_data_train = pd.DataFrame()
+    all_windowed_data_test = pd.DataFrame()
+
+    for project in projects:
+        # --- score 側の読み込み ---
+        dfs = []
+        for s in split:
+            input_root = Path(f"../scores/{project}/{s}")
+            for input_path in input_root.rglob("event_*.csv"):
+                tmp = pd.read_csv(input_path)
+                dfs.append(tmp)
+        df = pd.concat(dfs, ignore_index=True)
+        df = df.sort_values(by="Number", ascending=True) # 昇順
+
+        # --- root 側 ---
+        df_root = pd.read_csv(INTERIM_DIR/f"{project}/security2.csv")
+        df_new = df_root[["TimeCreated_SystemTime", "Label", "EventID"]]
+        df_new = df_new.rename(columns={"TimeCreated_SystemTime": "Timestamp"})
+        df_new["Number"] = df_new.index
+        # 初期化
+        df_new["mahalanobis_score"] = 0.0
+        df_new["knn_score"] = 0.0
+        df_new["score_missing"] = 1
+
+        # ----------------------- 統合 -----------------------
+        score_df = df[["Number", "Timestamp", "mahalanobis_score", "knn_score"]].copy()
+        score_df["Number"] = score_df["Number"].astype(int)
+        df_new = df_new.merge(
+            score_df,
+            on="Number",
+            how="left",
+            suffixes=("", "_src")
+        )
+        # ===== Timestamp 整合性チェック =====
+        # score が存在する行のみ検証
+        mask_score_present = df_new["Timestamp_src"].notna()
+        # 不一致検出
+        timestamp_mismatch = (
+            mask_score_present
+            & (df_new["Timestamp"] != df_new["Timestamp_src"])
+        )
+        if timestamp_mismatch.any():
+            bad_rows = df_new.loc[timestamp_mismatch, ["Number", "Timestamp", "Timestamp_src"]]
+            raise ValueError(
+                f"Timestamp mismatch detected after score merge.\n"
+                f"Examples:\n{bad_rows.head(5)}"
+            )
+        
+        df_new["mahalanobis_score"] = df_new["mahalanobis_score_src"].fillna(
+            df_new["mahalanobis_score"]
+        )
+        df_new["knn_score"] = df_new["knn_score_src"].fillna(
+            df_new["knn_score"]
+        )
+        # score が存在した行は missing=0
+        mask_present = df_new["mahalanobis_score_src"].notna() | df_new["knn_score_src"].notna()
+        df_new.loc[mask_present, "score_missing"] = 0
+
+        # 後始末
+        df_new = df_new.drop(columns=["mahalanobis_score_src", "knn_score_src"])
+
+        # ------- 諸操作 -------
+        df_new["Label"] = df_new["Label"].apply(lambda x: int(x != "-"))
+        df_new["datetime"] = pd.to_datetime(df_new["Timestamp"], errors="coerce")
+        df_new["timestamp"] = df_new["datetime"].astype("int64") // 10**9
+        df_new["deltaT"] = df_new["datetime"].diff().dt.total_seconds().fillna(0)
+
+        # train/test 分割()
+        train_len = int(len(df_new) * train_ratio[project])
+        train = df_new[:train_len]
+        test = df_new[train_len:]
+
+        for name, data in [("train", train), ("test", test)]:
+            # sampling with sliding window
+            deeplog_df = sliding_window(
+                data[use_columns],
+                para={"window_size": window_size, "step_size": step_size},
+                mode=mode,
+            )
+            deeplog_df["project"] = project
+
+            if name == "train":
+                all_windowed_data_train = pd.concat([all_windowed_data_train, deeplog_df], ignore_index=True)
+            else:
+                all_windowed_data_test = pd.concat([all_windowed_data_test, deeplog_df], ignore_index=True)
+
+    all_windowed_data_test_normal = all_windowed_data_test[all_windowed_data_test["Label"] == 0]
+    all_windowed_data_test_abnormal = all_windowed_data_test[all_windowed_data_test["Label"] == 1]
+
+    save_dir = output_dir / mode
+    save_dir.mkdir(exist_ok=True, parents=True)
+
+    # trainデータ保存
+    deeplog_file_generator(
+        filename=str(save_dir) + '/train',
+        df=all_windowed_data_train,
+        features=features
+    )
+    # trainのプロジェクト情報を保存
+    save_project_info(
+        filename=str(save_dir) + '/train_projects.csv',
+        df=all_windowed_data_train
+    )
+    
+    # test_normal保存
+    deeplog_file_generator(
+        filename=str(save_dir) + '/test_normal',
+        df=all_windowed_data_test_normal,
+        features=features
+    )
+    # test_normalのプロジェクト情報を保存
+    save_project_info(
+        filename=str(save_dir) + '/test_normal_projects.csv',
+        df=all_windowed_data_test_normal
+    )
+    
+    # test_abnormal保存
+    deeplog_file_generator(
+        filename=str(save_dir) + '/test_abnormal',
+        df=all_windowed_data_test_abnormal,
+        features=features
+    )
+    # test_abnormalのプロジェクト情報を保存
+    save_project_info(
+        filename=str(save_dir) + '/test_abnormal_projects.csv',
+        df=all_windowed_data_test_abnormal
+    )
+    
+    # 統計情報を収集
+    # seq_stats = {
+    #     "train": calculate_seq_length_stats(all_windowed_data_train, event_id),
+    #     "test_normal": calculate_seq_length_stats(all_windowed_data_test_normal, event_id),
+    #     "test_abnormal": calculate_seq_length_stats(all_windowed_data_test_abnormal, event_id),
+    # }
+
+    # シーケンス長統計をファイルに保存
+    # stats_output_path = output_dir / "seq_stats.txt"
+    # save_seq_stats_report(
+    #     stats_dict=seq_stats,
+    #     output_path=stats_output_path,
+    #     mode=mode,
+    #     window_size=window_size,
+    #     step_size=step_size,
+    # )
+
+    return
+
 
 def save_project_info(filename: str, df: pd.DataFrame) -> None:
     """
@@ -1754,3 +2097,411 @@ def print_equivalent_params_summary(params: dict, source_mode: str, target_mode:
     print(f"  推奨 step_size:   {params['step_size']}")
     print(f"  元の平均シーケンス長: {params['source_avg_sequence_length']:.2f}")
     print("=" * 60)
+
+
+def shuffle_elements_per_row(
+    input_dir: Path,
+    output_dir: Path,
+    file_names: List[str] = None,
+    random_seed: int = None,
+) -> None:
+    """
+    deeplog形式のファイルについて、各行の要素をシャッフルする。
+    行間での要素の交換は行わず、各行内でのみシャッフルを実行する。
+    
+    Parameters
+    ----------
+    input_dir : Path
+        入力ファイルのディレクトリパス
+    output_dir : Path
+        出力ファイルのディレクトリパス
+    file_names : List[str], optional
+        処理対象のファイル名リスト。Noneの場合はデフォルトで
+        ["test_abnormal", "test_normal", "train"]を使用
+    random_seed : int, optional
+        乱数シード。再現性のために指定可能
+    
+    Notes
+    -----
+    ファイル形式:
+        各行は「element1 element2 element3 ...」のようにスペース区切り
+        各要素は「EventId,deltaT」の形式（例: "704f24ce,0.0"）
+    
+    Example
+    -------
+    >>> shuffle_elements_per_row(
+    ...     input_dir=Path("data/processed/refine2/fixed"),
+    ...     output_dir=Path("data/processed/refine2/shuffled"),
+    ...     random_seed=42
+    ... )
+    """
+    import random
+    
+    if file_names is None:
+        file_names = ["test_abnormal", "test_normal", "train"]
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    if random_seed is not None:
+        random.seed(random_seed)
+    
+    for file_name in file_names:
+        input_path = input_dir / file_name
+        output_path = output_dir / file_name
+        
+        if not input_path.exists():
+            print(f"Warning: {input_path} does not exist. Skipping.")
+            continue
+        
+        print(f"Processing: {input_path}")
+        
+        shuffled_lines = []
+        line_count = 0
+        
+        with open(input_path, "r", encoding="utf-8") as f:
+            for line in tqdm(f, desc=f"Shuffling {file_name}"):
+                line = line.strip()
+                if not line:
+                    shuffled_lines.append("")
+                    continue
+                
+                # 行の要素をスペースで分割
+                elements = line.split(" ")
+                
+                # 末尾の空要素を除去（行末にスペースがある場合）
+                elements = [e for e in elements if e]
+                
+                # 行内でシャッフル
+                random.shuffle(elements)
+                
+                # シャッフルした要素を再結合
+                shuffled_line = " ".join(elements)
+                shuffled_lines.append(shuffled_line)
+                line_count += 1
+        
+        # 出力ファイルに書き込み
+        with open(output_path, "w", encoding="utf-8") as f:
+            for line in shuffled_lines:
+                f.write(line + "\n")
+        
+        print(f"  Processed {line_count} lines -> {output_path}")
+    
+    print(f"\nShuffle complete. Output saved to: {output_dir}")
+
+
+def shuffle_fixed_data(
+    random_seed: int = None,
+) -> None:
+    """
+    /home/ubuntu/My_lad/data/processed/refine2/fixed の各ファイルをシャッフルする
+    便利関数。出力先は shuffled ディレクトリ。
+    
+    Parameters
+    ----------
+    random_seed : int, optional
+        乱数シード
+    """
+    base_dir = Path("/home/ubuntu/My_lad/data/processed/refine2")
+    input_dir = base_dir / "fixed"
+    output_dir = base_dir / "shuffled"
+    
+    shuffle_elements_per_row(
+        input_dir=input_dir,
+        output_dir=output_dir,
+        random_seed=random_seed,
+    )
+
+
+def merge_processed_files(
+    file_path1: Path,
+    file_path2: Path,
+    output_dir: Path,
+    output_filename: str = "merged",
+    mode: str = "fixed",
+    window_size: int = 0,
+    step_size: int = 0,
+) -> None:
+    """
+    data/processed 下のファイル形式2つを結合し、seq_stats.txt を生成する関数。
+    
+    Parameters
+    ----------
+    file_path1 : Path
+        結合する1つ目のファイルパス (例: data/processed/xxx/train)
+    file_path2 : Path
+        結合する2つ目のファイルパス (例: data/processed/xxx/test_normal)
+    output_dir : Path
+        出力先ディレクトリ
+    output_filename : str
+        出力ファイル名 (デフォルト: "merged")
+    mode : str
+        sliding_windowのモード (統計レポート用, デフォルト: "fixed")
+    window_size : int
+        ウィンドウサイズ (統計レポート用, デフォルト: 0)
+    step_size : int
+        ステップサイズ (統計レポート用, デフォルト: 0)
+    """
+    from datetime import datetime
+    
+    # 出力ディレクトリ作成
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # ファイルの存在確認
+    if not file_path1.exists():
+        raise FileNotFoundError(f"File not found: {file_path1}")
+    if not file_path2.exists():
+        raise FileNotFoundError(f"File not found: {file_path2}")
+    
+    # ファイル読み込み
+    with open(file_path1, "r", encoding="utf-8") as f1:
+        lines1 = f1.readlines()
+    with open(file_path2, "r", encoding="utf-8") as f2:
+        lines2 = f2.readlines()
+    
+    # 結合
+    merged_lines = lines1 + lines2
+    
+    # 出力ファイルに書き込み
+    output_path = output_dir / output_filename
+    with open(output_path, "w", encoding="utf-8") as f_out:
+        f_out.writelines(merged_lines)
+    
+    print(f"Merged {len(lines1)} lines from {file_path1.name}")
+    print(f"Merged {len(lines2)} lines from {file_path2.name}")
+    print(f"Total: {len(merged_lines)} lines")
+    print(f"Output saved to: {output_path}")
+    
+    # シーケンス長統計を計算
+    # 各行のトークン数（スペース区切り）をシーケンス長として扱う
+    seq_lengths = []
+    for line in merged_lines:
+        line = line.strip()
+        if line:
+            tokens = line.split()
+            seq_lengths.append(len(tokens))
+    
+    if len(seq_lengths) == 0:
+        print("Warning: No valid lines found in merged file.")
+        return
+    
+    import numpy as np
+    lengths_array = np.array(seq_lengths)
+    
+    stats = {
+        "count": len(seq_lengths),
+        "avg_len": float(lengths_array.mean()),
+        "min_len": int(lengths_array.min()),
+        "max_len": int(lengths_array.max()),
+        "std_len": float(lengths_array.std()),
+    }
+    
+    # seq_stats dict 形式で作成（既存のsave_seq_stats_report形式に合わせる）
+    seq_stats = {
+        "merged": {
+            output_filename: stats,
+        }
+    }
+    
+    # 統計レポートを保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
+
+
+def extract_lines_from_processed(
+    input_path: Path,
+    output_dir: Path,
+    output_filename: str = None,
+    start_line: int = None,
+    end_line: int = None,
+    num_lines: int = None,
+    from_head: int = None,
+    from_tail: int = None,
+    mode: str = "fixed",
+    window_size: int = 0,
+    step_size: int = 0,
+) -> None:
+    """
+    data/processed 下のファイル形式から指定した行数を抽出して保存する関数。
+    
+    Parameters
+    ----------
+    input_path : Path
+        入力ファイルパス (例: data/processed/xxx/train)
+    output_dir : Path
+        出力先ディレクトリ
+    output_filename : str, optional
+        出力ファイル名 (デフォルト: 入力ファイル名と同じ)
+    start_line : int, optional
+        抽出開始行 (1-indexed)
+    end_line : int, optional
+        抽出終了行 (1-indexed, inclusive)
+    num_lines : int, optional
+        start_lineから抽出する行数
+    from_head : int, optional
+        前端（先頭）からN行を抽出
+    from_tail : int, optional
+        後端（末尾）からN行を抽出
+    mode : str
+        sliding_windowのモード (統計レポート用, デフォルト: "fixed")
+    window_size : int
+        ウィンドウサイズ (統計レポート用, デフォルト: 0)
+    step_size : int
+        ステップサイズ (統計レポート用, デフォルト: 0)
+    
+    Notes
+    -----
+    抽出方法は以下のいずれかを指定:
+    - from_head: 前端からN行
+    - from_tail: 後端からN行
+    - start_line + end_line: 開始行〜終了行
+    - start_line + num_lines: 開始行からN行
+    - 何も指定しない場合: 全行
+    
+    Examples
+    --------
+    >>> # 前端から100行を抽出
+    >>> extract_lines_from_processed(
+    ...     input_path=Path("data/processed/ex2/train"),
+    ...     output_dir=Path("data/processed/ex2_subset"),
+    ...     from_head=100,
+    ... )
+    
+    >>> # 後端から50行を抽出
+    >>> extract_lines_from_processed(
+    ...     input_path=Path("data/processed/ex2/train"),
+    ...     output_dir=Path("data/processed/ex2_subset"),
+    ...     from_tail=50,
+    ... )
+    
+    >>> # 1行目から100行目まで抽出
+    >>> extract_lines_from_processed(
+    ...     input_path=Path("data/processed/ex2/train"),
+    ...     output_dir=Path("data/processed/ex2_subset"),
+    ...     start_line=1,
+    ...     end_line=100,
+    ... )
+    """
+    # 出力ディレクトリ作成
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # ファイルの存在確認
+    if not input_path.exists():
+        raise FileNotFoundError(f"File not found: {input_path}")
+    
+    # 出力ファイル名
+    if output_filename is None:
+        output_filename = input_path.name
+    
+    # ファイル読み込み
+    with open(input_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    
+    total_lines = len(lines)
+    print(f"Input file: {input_path}")
+    print(f"Total lines in input: {total_lines}")
+    
+    # 引数の排他チェック
+    specified_options = sum([
+        from_head is not None,
+        from_tail is not None,
+        start_line is not None or end_line is not None or num_lines is not None,
+    ])
+    if specified_options > 1 and (from_head is not None or from_tail is not None):
+        raise ValueError("from_head/from_tail は他の抽出オプション(start_line/end_line/num_lines)と同時に指定できません。")
+    
+    if end_line is not None and num_lines is not None:
+        raise ValueError("end_line と num_lines の両方を指定することはできません。")
+    
+    # 行範囲の決定
+    if from_head is not None:
+        # 前端からN行
+        start_idx = 0
+        end_idx = min(from_head, total_lines)
+        print(f"Extracting {from_head} lines from head")
+    elif from_tail is not None:
+        # 後端からN行
+        start_idx = max(0, total_lines - from_tail)
+        end_idx = total_lines
+        print(f"Extracting {from_tail} lines from tail")
+    else:
+        # start_line/end_line/num_lines による指定
+        if start_line is None:
+            start_line = 1
+        start_idx = start_line - 1
+    
+        if start_idx < 0:
+            raise ValueError(f"start_line は 1 以上である必要があります: {start_line}")
+        if start_idx >= total_lines:
+            raise ValueError(f"start_line ({start_line}) がファイルの行数 ({total_lines}) を超えています")
+        
+        if end_line is not None:
+            end_idx = end_line  # exclusive for slicing
+            if end_idx > total_lines:
+                print(f"Warning: end_line ({end_line}) がファイルの行数 ({total_lines}) を超えています。全行を抽出します。")
+                end_idx = total_lines
+        elif num_lines is not None:
+            end_idx = start_idx + num_lines
+            if end_idx > total_lines:
+                print(f"Warning: 指定された行数 ({num_lines}) が残り行数を超えています。利用可能な行のみ抽出します。")
+                end_idx = total_lines
+        else:
+            # デフォルトは全行（start_lineから最後まで）
+            end_idx = total_lines
+    
+    # 行の抽出
+    extracted_lines = lines[start_idx:end_idx]
+    
+    # 出力ファイルに書き込み
+    output_path = output_dir / output_filename
+    with open(output_path, "w", encoding="utf-8") as f_out:
+        f_out.writelines(extracted_lines)
+    
+    print(f"Extracted lines: {start_idx + 1} to {end_idx} ({len(extracted_lines)} lines)")
+    print(f"Output saved to: {output_path}")
+    
+    # シーケンス長統計を計算
+    seq_lengths = []
+    for line in extracted_lines:
+        line = line.strip()
+        if line:
+            tokens = line.split()
+            seq_lengths.append(len(tokens))
+    
+    if len(seq_lengths) == 0:
+        print("Warning: No valid lines found in extracted file.")
+        return
+    
+    import numpy as np
+    lengths_array = np.array(seq_lengths)
+    
+    stats = {
+        "count": len(seq_lengths),
+        "avg_len": float(lengths_array.mean()),
+        "min_len": int(lengths_array.min()),
+        "max_len": int(lengths_array.max()),
+        "std_len": float(lengths_array.std()),
+    }
+    
+    # seq_stats dict 形式で作成
+    seq_stats = {
+        "extracted": {
+            output_filename: stats,
+        }
+    }
+    
+    # 統計レポートを保存
+    stats_output_path = output_dir / "seq_stats.txt"
+    save_seq_stats_report(
+        stats_dict=seq_stats,
+        output_path=stats_output_path,
+        mode=mode,
+        window_size=window_size,
+        step_size=step_size,
+    )
+

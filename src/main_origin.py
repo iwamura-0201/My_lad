@@ -233,7 +233,7 @@ def test(cfg, model, device, data_dict, output_dir_path):
         return full_result, seq_range
     
 
-def do_test(weight_file_path, eval_batchsize, gpu, override_args):
+def do_test(weight_file_name, eval_batchsize, gpu):
     """
     学習済みモデルの重みファイルを指定してテスト一式を実行するラッパー関数。
 
@@ -259,9 +259,8 @@ def do_test(weight_file_path, eval_batchsize, gpu, override_args):
     └─ weights/
         └─ lossbest.pth など（model_file_name で指定）
     """
-    
     # 実験ディレクトリの導出
-    output_dir_path = weight_file_path.split("/")
+    output_dir_path = weight_file_name.split("/")
     output_dir_path = "/".join(output_dir_path[:-2])
 
     print("=" * 50)
@@ -270,9 +269,6 @@ def do_test(weight_file_path, eval_batchsize, gpu, override_args):
 
     # cfgの読み込み
     cfg = OmegaConf.load(output_dir_path + "/config.yaml")
-
-    # 上書き
-    cfg = OmegaConf.merge(cfg, OmegaConf.from_cli(args_list=override_args))
 
     # デバイスのセットアップ・reverseオプションの設定
     # GPU_IDだけは実行時引数の指定を優先
@@ -293,7 +289,7 @@ def do_test(weight_file_path, eval_batchsize, gpu, override_args):
     # modelとdataのロード
     data_dict = suggest_testloader(cfg, vocab, eval_batchsize)
     model = suggest_network(cfg)
-    model_weight = torch.load(weight_file_path, map_location={device: "cpu"})
+    model_weight = torch.load(weight_file_name, map_location={device: "cpu"})
     model.load_state_dict(model_weight)
     model.to(device)
 
@@ -387,10 +383,9 @@ def main_cli(args):
                     "Usage: python main.py test <model_file_name> <eval_batchsize> <gpu>"
                 )
             # mode == "test"
-            weight_file_path = args[1]
+            weight_file_name = args[1]
             eval_batchsize = int(args[2])
             gpu = args[3]
-            override_args = args[4:]
     else:
         # モード省略時は train 扱い
         run_mode = "train"
@@ -403,7 +398,7 @@ def main_cli(args):
         print("setup")
         do_train(cfg)
     else:
-        do_test(weight_file_path, eval_batchsize, gpu, override_args)
+        do_test(weight_file_name, eval_batchsize, gpu)
 
 
 

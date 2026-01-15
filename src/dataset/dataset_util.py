@@ -24,57 +24,32 @@ def set_dataset_path(
     what が "vocab" のとき、辞書のパスを返す
     """
     # データセットのベースパス
-    if "another_method" in cfg.dataset and cfg.dataset.another_method:
-        another_method = True # 識別子
+    if "dataset_dir" in cfg.dataset:
         dataset_dir = Path(cfg.dataset.dataset_dir)
-        dataset_dir = dataset_dir / f"ratio_{cfg.dataset.train_ratio}"
-    elif (cfg.dataset.name == "BGL" or cfg.dataset.name == "Tbird" or cfg.dataset.name == "refine" or cfg.dataset.name == "refine2"):
-        another_method = False
-        dataset_dir = Path(cfg.dataset.dataset_dir) / cfg.dataset.window_type
     else:
-        another_method = False
-        dataset_dir = PROCESSED_DIR / cfg.dataset.name / f"ver_{cfg.dataset.version}" / f"ratio_{cfg.dataset.train_ratio}"
+    # 指定が無い場合は、標準規則で自動的に構築
+        dataset_dir = PROCESSED_DIR / cfg.dataset.name / f"ratio_{cfg.dataset.train_ratio}"
     
     # reverse が存在していて True のときだけ「test_normal」を train として扱う
     use_reverse = ("reverse" in cfg.dataset) and cfg.dataset.reverse
     
-    # 読み込むファイルの決定
     if what == "train":
-        if use_reverse:
-            if another_method:
-                data_path = dataset_dir / cfg.dataset.name / "test_normal"
-            else:
-                data_path = dataset_dir / "test_normal"
-        else:
-            if another_method:
-                data_path = dataset_dir / "train"
-            else:
-                data_path = dataset_dir / "train"
+        data_path = dataset_dir / "train"
     elif what == "test_normal":
-        if use_reverse:
-            if another_method:
-                data_path = dataset_dir / "train"
-            else:
-                data_path = dataset_dir / "train"
+        if "dataset_dir" in cfg.eval:
+            data_path = Path(cfg.eval.dataset_dir) / "test_normal"
         else:
-            if another_method:
-                data_path = dataset_dir / cfg.dataset.name / "test_normal"
-            else:
-                data_path = dataset_dir / "test_normal"
-
+            data_path = dataset_dir / "test_normal"
     elif what == "test_abnormal":
-        if another_method:
-            data_path = dataset_dir / cfg.dataset.name / "test_abnormal"
+        if "dataset_dir" in cfg.eval:
+            data_path = Path(cfg.eval.dataset_dir) / "test_abnormal"
         else:
             data_path = dataset_dir / "test_abnormal"
     elif what == "vocab":
-        if another_method:
-            data_path = Path(cfg.dataset.dataset_dir) / "vocab" /"train"
-        elif (cfg.dataset.name == "BGL" or cfg.dataset.name == "Tbird" or cfg.dataset.name == "refine" or cfg.dataset.name == "refine2"):
-            data_path = dataset_dir / "vocab/train"
-        else:
-            data_path = PROCESSED_DIR / cfg.dataset.name / f"ver_{cfg.dataset.version}" / "vocab" /"train"
-    
+         return dataset_dir # vocabはそのまま返す
+    else:
+        raise ValueError(f"Unknown dataset type: {what}")
+
     return data_path
 
 def generate_train_valid(cfg):
@@ -363,23 +338,64 @@ def fixed_window(line, window_size, adaptive_window, seq_len=512, min_len=0):
 
 
 def suggest_vocab(cfg):
-
-    # データセットのパスを設定
-    data_path = set_dataset_path(cfg, "vocab")
+    """
+    データセットディレクトリ下の全ファイルからvocabを構築する。
     
-    with data_path.open("r", encoding="utf-8") as f:
-        texts = f.readlines()
+    set_dataset_pathから返されたディレクトリ下に存在する
+    train, test_normal, test_abnormal ファイルを再帰的に走査し、
+    全ファイルの和集合としてvocabを定義する。
+    
+    各ファイルは "hash,time hash,time ..." 形式のため、
+    hash部分のみを抽出してWordVocabに渡す。
+    """
+    import os
+    from pathlib import Path
+    
+    # データセットのベースディレクトリを取得
+    data_dir = set_dataset_path(cfg, "vocab")
+    
+    # 対象ファイル名
+    target_files = ["train", "test_normal", "test_abnormal"]
+    
+    # すべての対象ファイルを再帰的に探索
+    all_files = []
+    for root, dirs, files in os.walk(data_dir):
+        for file_name in files:
+            if file_name in target_files:
+                all_files.append(Path(root) / file_name)
+    
+    print(f"Found {len(all_files)} vocab source files:")
+    for f in all_files:
+        print(f"  - {f}")
+    
+    # 全ファイルからhashを抽出
+    processed_texts = []
+    for file_path in all_files:
+        with file_path.open("r", encoding="utf-8") as f:
+            lines = f.readlines()
+        
+        for line in lines:
+            tokens = line.strip().split()
+            # 各トークンは "hash,time" 形式なので、カンマで分割して最初の要素(hash)を取得
+            hashes = [token.split(",")[0] for token in tokens if token]
+            # スペース区切りで再結合（WordVocabが期待する形式）
+            if hashes:
+                processed_texts.append(" ".join(hashes))
+    
+    print(f"Total lines processed: {len(processed_texts)}")
     
     if cfg.dataset.vocab.name == "wordvocab":
         vocab = WordVocab(
-            texts,
+            processed_texts,
             max_size=cfg.dataset.vocab.vocab_size,
             min_freq=cfg.dataset.vocab.min_freq,
         )
     elif cfg.dataset.vocab.name == "vocab":
-        vocab = Vocab(texts)
+        vocab = Vocab(processed_texts)
+    else:
+        raise ValueError(f"Unknown vocab type: {cfg.dataset.vocab.name}")
+    
     print("VOCAB SIZE:", len(vocab))
-    # vocab.save_vocab(f"{cfg.out_dir}vocab.pkl")
     return vocab
 
 

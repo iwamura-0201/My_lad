@@ -1,0 +1,48 @@
+# ScoreBERT Configuration
+# BERT-based self-supervised learning for log anomaly detection
+
+default:
+  dir_name: ../outputs/score_bert
+  num_workers: 4
+  epochs: 70
+  r_seed: 42
+  device_id: "cuda:0"
+  deterministic: True
+  check_val_every_n_epoch: 1
+  save_every: 10
+
+# Network (model) configuration
+network:
+  ver: "score_bert"
+  encoder:
+    name: score_bert
+    input_dim: 386        # EventID_emb(384) + score(1) + score_missing(1)
+    hidden_size: 128      # Range: 128-256
+    n_layers: 3           # Range: 2-4
+    n_heads: 4            # Range: 4-8
+    dropout: 0.1
+    max_len: 512
+    eventid_dim: 384
+
+# Loss configuration
+loss:
+  beta: 1.0            # Weight for eventid_err (after normalization, β≈1 is usually sufficient)
+  epsilon: 1e-8
+  momentum: 0.1         # Momentum for running statistics update
+
+# Dataset configuration
+dataset:
+  data_dir: ../data/processed/scores/fixed_embedded
+  train_file: train.npz
+  sample:
+    mask_ratio: 0.15
+    noise_std: 1.0          # Std of Gaussian noise for score masking
+    val_rate: 0.1           # Validation split ratio from training data
+
+# Optimizer configuration
+optimizer:
+  name: AdamW
+  hp:
+    lr: 1e-4
+    weight_decay: 0.01
+    batch_size: 32

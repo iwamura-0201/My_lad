@@ -1,12 +1,13 @@
 default:
-  dir_name: outputs
+  dir_name: ../outputs
   resource: "local"
   num_workers: 16
   epochs: 200
   r_seed: 31
-  device_id: "cuda:3"
+  device_id: "cuda:0"
   deterministic: True
   check_val_every_n_epoch: 1
+  early_stop_patience: 20
   monitor:
     name: "ValTotal"
     mode: "min"
@@ -14,13 +15,13 @@ default:
 network: 
   ver: "logbert"
   encoder:
-      name: bert
+      name: bert_no_time
       hidden_size: 256
       layer_num: 4
       attn_heads: 4
       dropout: 0.1
   is_logkey: True
-  is_time: False
+  is_time: True
 loss:
   num: 2
   mask:
@@ -28,9 +29,10 @@ loss:
   hypersphere:
     bias: 0.1
 dataset:
-  name: "AMIYA2"
+  name: "ex1"
   parser: True
-  train_ratio: 4
+  dataset_dir: "../data/processed/ex1"
+  window_type: "fixed"
   sample:
     window_size:  128
     adaptive_window: True
@@ -41,12 +43,18 @@ dataset:
     valid_size: 0.1
   vocab:
     name: wordvocab
-    vocab_size: 33
+    vocab_size: None # None ⇒ 訓練開始時、自動的に計算
     min_freq: 1
 eval:
+  dataset_dir: "../data/processed/ex1/WEB1"
   hypersphere_loss_test: False
   num_candidates: 15
-  
+  per_project_eval: False  # プロジェクト別精度を計算するかどうか
+  project_eval_threshold: 0.5  # プロジェクト別評価の異常判定閾値
+  #seq_range_start: 0.0   # 開始しきい値
+  #seq_range_end: 0.1     # 終了しきい値（例）
+  #seq_range_step: 0.01   # 刻み幅
+
 optimizer:
   name: SGD
   scheduler:

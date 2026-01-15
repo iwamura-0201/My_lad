@@ -30,7 +30,6 @@ loss:
     bias: 0.1
 dataset:
   name: "BGL"
-  version: 0
   parser: True
   train_ratio: 0.8
   dataset_dir: "../data/processed/BGL"
