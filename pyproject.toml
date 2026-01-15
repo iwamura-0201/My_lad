@@ -31,6 +31,7 @@ dependencies = [
   "pycocotools>=2.0.8",
   "einops==0.8.1",
   "python-evtx>=0.8.1",
+  "openpyxl>=3.1.5",
 ]
 
 [tool.uv.sources]
