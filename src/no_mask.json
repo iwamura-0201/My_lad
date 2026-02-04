@@ -1,8 +1,30 @@
 {
     "4688": [
-        "ProcessId"
+        "NewProcessName",
+        "ParentProcessName"
     ],
     "5156": [
-        "ProcessID"
+        "Application",
+        "DestPort",
+        "Protocol",
+        "Direction"
+    ],
+    "4673": [
+        "ObjectServer",
+        "Service",
+        "PrivilegeList",
+        "ProcessName"
+    ],
+    "4702": [
+        "SubjectDomainName",
+        "TaskName"
+    ],
+    "5447": [
+        "ProviderKey",
+        "ProviderName",
+        "FilterName",
+        "FilterType",
+        "LayerName",
+        "Action"
     ]
 }

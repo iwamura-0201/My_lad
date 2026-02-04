@@ -44,7 +44,7 @@ def setup_config(
     # 出力ディレクトリのパス生成
     if "out_dir" not in cfg:
         if hasattr(cfg.dataset, 'dataset_dir'):
-            dataset_path =  cfg.dataset.dataset_dir.replace("../data/processed/", "")
+            dataset_path =  cfg.dataset.dataset_dir.replace("../data/processed/", "").rstrip("/") + "/"
         else:
             if "reverse" in cfg.dataset and cfg.dataset.reverse:
                 dataset_path = f"{cfg.dataset.name}/ratio_{1.0 - cfg.dataset.train_ratio}/"

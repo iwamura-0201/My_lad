@@ -352,6 +352,183 @@ def do_test(weight_file_path, eval_batchsize, gpu, override_args):
 
 
 
+def do_test_roc(weight_file_path, eval_batchsize, gpu, override_args):
+    """
+    学習済みモデルの重みファイルを指定してROC曲線をプロットする関数。
+    sklearnのroc_curveを使用して自動的に最適な閾値でROC曲線を生成します。
+    
+    <入力>
+      weight_file_path：weights フォルダ配下の .pth ファイルへのパス
+      eval_batchsize：テスト時のバッチサイズ
+      gpu：使用する GPU ID
+      override_args：設定の上書き引数リスト
+    
+    <出力>
+      roc_curve.png：ROC曲線のプロット画像
+      roc_curve.pdf：ROC曲線のプロット画像（PDF版）
+    """
+    from sklearn.metrics import roc_curve, auc
+    
+    # 実験ディレクトリの導出
+    output_dir_path = weight_file_path.split("/")
+    output_dir_path = "/".join(output_dir_path[:-2])
+
+    print("=" * 50)
+    print(f"Output directory: {output_dir_path}")
+    print("=" * 50)
+
+    # cfgの読み込み
+    cfg = OmegaConf.load(output_dir_path + "/config.yaml")
+    
+    # 上書き
+    cfg = OmegaConf.merge(cfg, OmegaConf.from_cli(args_list=override_args))
+
+    # デバイスのセットアップ
+    cfg.default.device_id = gpu
+    device = setup_device(cfg)
+    if "reverse" not in cfg.dataset:
+        cfg.dataset.reverse = False
+    print(f"Device: {device}, GPU ID: {cfg.default.device_id}")
+
+    fixed_r_seed(cfg)
+    vocab = suggest_vocab(cfg)
+    
+    # vocab_sizeがNoneの場合、実際のvocabサイズで更新
+    if cfg.dataset.vocab.vocab_size is None or cfg.dataset.vocab.vocab_size == "None":
+        cfg.dataset.vocab.vocab_size = len(vocab)
+        print(f"Updated vocab_size to {len(vocab)}")
+
+    # modelとdataのロード
+    data_dict = suggest_testloader(cfg, vocab, eval_batchsize)
+    model = suggest_network(cfg)
+    model_weight = torch.load(weight_file_path, map_location={device: "cpu"})
+    model.load_state_dict(model_weight)
+    model.to(device)
+
+    # 評価モードにする
+    model.eval()
+    
+    print("Evaluating model and collecting anomaly scores...")
+    
+    # 各サンプルの異常スコアとラベルを収集
+    all_scores = []
+    all_labels = []
+    
+    with torch.no_grad():
+        for name, label in [("test_normal", 0), ("test_abnormal", 1)]:
+            dataloader = data_dict[name]
+            
+            for data in tqdm(dataloader, desc=f"Processing {name}"):
+                # バッチをGPUに乗せる
+                data = {key: value.to(device) for key, value in data.items()}
+                
+                # モデルに通して出力を得る
+                output = model(data)
+                
+                mask_index = data["bert_label"] > 0
+                num_masked_tokens = mask_index.sum(dim=-1)
+                
+                # top-k予測候補の取得
+                top_candidates = torch.argsort(-output["logkey_output"], dim=-1)[
+                    :, :, : cfg.eval.num_candidates
+                ]
+                
+                # top-kに正解が含まれない箇所をカウント
+                num_undetected_tokens = (
+                    ~(
+                        data["bert_label"]
+                        .unsqueeze(-1)
+                        .expand(-1, -1, top_candidates.size(-1))
+                        == top_candidates
+                    ).any(dim=-1)
+                    & mask_index
+                ).sum(dim=-1)
+                
+                # 異常スコア：undetected_tokens / masked_tokens の比率
+                # masked_tokensが0の場合は0にする
+                anomaly_scores = torch.where(
+                    num_masked_tokens > 0,
+                    num_undetected_tokens.float() / num_masked_tokens.float(),
+                    torch.zeros_like(num_undetected_tokens, dtype=torch.float)
+                )
+                
+                all_scores.extend(anomaly_scores.cpu().numpy())
+                all_labels.extend([label] * len(anomaly_scores))
+    
+    # NumPy配列に変換
+    all_scores = np.array(all_scores)
+    all_labels = np.array(all_labels)
+    
+    print(f"Total samples: {len(all_scores)} (Normal: {np.sum(all_labels==0)}, Abnormal: {np.sum(all_labels==1)})")
+    
+    # sklearnでROC曲線を計算
+    fpr_values, tpr_values, thresholds = roc_curve(all_labels, all_scores)
+    roc_auc = auc(fpr_values, tpr_values)
+    
+    print(f"AUC: {roc_auc:.4f}")
+
+    # ROC曲線のプロット（a.pyのスタイルを参考）
+    roc_color = "#0072B2"   # 青
+    rand_color = "#7F7F7F"  # グレー
+
+    plt.figure(figsize=(6, 6))
+
+    # ROC曲線：青 + 実線 + マーカーなし（sklearnで生成されるポイント数が多いため）
+    plt.plot(
+        fpr_values, tpr_values,
+        color=roc_color,
+        linewidth=2.2,
+        linestyle="-",
+        label=f"ROC (AUC = {roc_auc:.3f})"
+    )
+
+    # Random：控えめなグレー + 破線
+    plt.plot(
+        [0, 1], [0, 1],
+        color=rand_color,
+        linewidth=1.8,
+        linestyle=(0, (4, 3)),
+        label="Random"
+    )
+
+    plt.xlabel("FPR")
+    plt.ylabel("TPR")
+    plt.title("ROC Curve")
+
+    # グリッドは薄く
+    plt.grid(True, which="major", linestyle=":", linewidth=0.8, alpha=0.5)
+
+    # 余白・枠
+    ax = plt.gca()
+    ax.set_xlim(-0.01, 1.01)
+    ax.set_ylim(-0.01, 1.02)
+    ax.set_aspect("equal", adjustable="box")
+
+    # 上・右の罫線を削除
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # 凡例
+    plt.legend(
+        loc="lower right",
+        frameon=True,
+        framealpha=1.0,
+        facecolor="white",
+        edgecolor="#CCCCCC"
+    )
+
+    plt.tight_layout()
+    
+    # 保存
+    save_path_png = output_dir_path + "/roc_curve.png"
+    save_path_pdf = output_dir_path + "/roc_curve.pdf"
+    plt.savefig(save_path_png, dpi=300)
+    plt.savefig(save_path_pdf)
+    print(f"ROC curve saved to {save_path_png} and {save_path_pdf}")
+    
+    plt.show()
+
+
 def main_cli(args):
     """
     コマンドライン相当の引数リストを解釈して train / test を実行する関数。
@@ -370,7 +547,7 @@ def main_cli(args):
         )
 
     # 各引数の解釈
-    if args[0] in ("train", "test"):
+    if args[0] in ("train", "test", "test_roc"):
         run_mode = args[0]
         if run_mode == "train":
             if len(args) < 2:
@@ -380,13 +557,13 @@ def main_cli(args):
                 )
             config_file_name = args[1]
             override_args = args[2:]
-        else:
+        elif run_mode in ("test", "test_roc"):
             if len(args) < 4:
                 raise ValueError(
-                    "test モードでは model_file_name, eval_batchsize, gpu を指定してください。\n"
-                    "Usage: python main.py test <model_file_name> <eval_batchsize> <gpu>"
+                    f"{run_mode} モードでは model_file_name, eval_batchsize, gpu を指定してください。\n"
+                    f"Usage: python main.py {run_mode} <model_file_name> <eval_batchsize> <gpu>"
                 )
-            # mode == "test"
+            # mode == "test" or "test_roc"
             weight_file_path = args[1]
             eval_batchsize = int(args[2])
             gpu = args[3]
@@ -402,8 +579,10 @@ def main_cli(args):
         cfg = setup_config(config_file_name, override_args) 
         print("setup")
         do_train(cfg)
-    else:
+    elif run_mode == "test":
         do_test(weight_file_path, eval_batchsize, gpu, override_args)
+    elif run_mode == "test_roc":
+        do_test_roc(weight_file_path, eval_batchsize, gpu, override_args)
 
 
 

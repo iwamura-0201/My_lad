@@ -1,10 +1,12 @@
-data/*
-data
 dataset
-eventid_content/*
+eventid_content
+embedded
+data
+scores
 .venv
 *.zip
 output/*
+outputs/*
 archive/*
 
 # Pythonが生成するキャッシュや一時ファイル

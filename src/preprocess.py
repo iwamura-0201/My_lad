@@ -2213,8 +2213,7 @@ def shuffle_fixed_data(
 
 
 def merge_processed_files(
-    file_path1: Path,
-    file_path2: Path,
+    *file_paths: Path,
     output_dir: Path,
     output_filename: str = "merged",
     mode: str = "fixed",
@@ -2222,14 +2221,12 @@ def merge_processed_files(
     step_size: int = 0,
 ) -> None:
     """
-    data/processed 下のファイル形式2つを結合し、seq_stats.txt を生成する関数。
+    data/processed 下のファイル形式を複数結合し、seq_stats.txt を生成する関数。
     
     Parameters
     ----------
-    file_path1 : Path
-        結合する1つ目のファイルパス (例: data/processed/xxx/train)
-    file_path2 : Path
-        結合する2つ目のファイルパス (例: data/processed/xxx/test_normal)
+    *file_paths : Path
+        結合するファイルパス (2つ以上, 例: data/processed/xxx/train, data/processed/xxx/test_normal)
     output_dir : Path
         出力先ディレクトリ
     output_filename : str
@@ -2243,31 +2240,31 @@ def merge_processed_files(
     """
     from datetime import datetime
     
+    # 最低2ファイル必要
+    if len(file_paths) < 2:
+        raise ValueError(f"At least 2 files are required to merge. Got {len(file_paths)} file(s).")
+    
     # 出力ディレクトリ作成
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # ファイルの存在確認
-    if not file_path1.exists():
-        raise FileNotFoundError(f"File not found: {file_path1}")
-    if not file_path2.exists():
-        raise FileNotFoundError(f"File not found: {file_path2}")
+    for file_path in file_paths:
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
     
-    # ファイル読み込み
-    with open(file_path1, "r", encoding="utf-8") as f1:
-        lines1 = f1.readlines()
-    with open(file_path2, "r", encoding="utf-8") as f2:
-        lines2 = f2.readlines()
-    
-    # 結合
-    merged_lines = lines1 + lines2
+    # ファイル読み込みと結合
+    merged_lines = []
+    for file_path in file_paths:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        merged_lines.extend(lines)
+        print(f"Merged {len(lines)} lines from {file_path.name}")
     
     # 出力ファイルに書き込み
     output_path = output_dir / output_filename
     with open(output_path, "w", encoding="utf-8") as f_out:
         f_out.writelines(merged_lines)
     
-    print(f"Merged {len(lines1)} lines from {file_path1.name}")
-    print(f"Merged {len(lines2)} lines from {file_path2.name}")
     print(f"Total: {len(merged_lines)} lines")
     print(f"Output saved to: {output_path}")
     
